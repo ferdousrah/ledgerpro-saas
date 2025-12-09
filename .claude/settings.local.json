@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pip:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npm run dev:*)",
+      "Bash(where:*)",
+      "Bash(py --version)",
+      "Bash(py -m pip install:*)",
+      "Bash(py run.py:*)",
+      "Bash(timeout /t 3)",
+      "Bash(curl:*)",
+      "Bash(py check_db.py:*)",
+      "Bash(py:*)",
+      "Bash(del check_tables.py)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(del c:githubledgerpro-saasbackendcheck_tenant.py)",
+      "Bash(del check_tenant.py)",
+      "Bash(del create_tax_table.py)",
+      "Bash(python:*)",
+      "Bash(del c:githubledgerpro-saasbackendrun_migration.py)",
+      "Bash(del c:githubledgerpro-saasbackendcheck_db.py)",
+      "Bash(del drop_partners.py)",
+      "Bash(del check_columns.py)",
+      "Bash(del:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounting SaaS - Complete Workflow v3</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1500px; margin: 0 auto; }
+        h1 { text-align: center; color: #fff; margin-bottom: 10px; font-size: 2.5rem; }
+        .subtitle { text-align: center; color: #64ffda; margin-bottom: 30px; font-size: 1.1rem; }
+        .tech-stack { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        .tech-badge {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(100, 255, 218, 0.3);
+            padding: 8px 16px;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        .tech-badge span { color: #64ffda; font-weight: bold; }
+        .section {
+            background: rgba(255,255,255,0.97);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .section.owner-section {
+            background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+            border: 2px solid #ff5722;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #64ffda;
+        }
+        .section-title.owner { border-bottom-color: #ff5722; }
+        .mermaid { display: flex; justify-content: center; overflow-x: auto; }
+        .note-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196f3;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .note-box h4 { color: #1565c0; margin-bottom: 8px; }
+        .note-box p { color: #1a237e; font-size: 0.95rem; }
+        .warning-box {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border-left: 4px solid #f44336;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .warning-box h4 { color: #c62828; margin-bottom: 8px; }
+        .warning-box p { color: #5d4037; font-size: 0.95rem; }
+        .owner-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 4px solid #ff5722;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .owner-box h4 { color: #e64a19; margin-bottom: 8px; }
+        .owner-box p { color: #5d4037; font-size: 0.95rem; }
+        .three-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }
+        .panel { border-radius: 12px; padding: 20px; text-align: center; }
+        .panel.owner { background: linear-gradient(135deg, #ff5722, #ff7043); color: white; }
+        .panel.single { background: linear-gradient(135deg, #4caf50, #66bb6a); color: white; }
+        .panel.double { background: linear-gradient(135deg, #2196f3, #42a5f5); color: white; }
+        .panel h3 { font-size: 1.3rem; margin-bottom: 10px; }
+        .panel p { font-size: 0.9rem; opacity: 0.9; }
+        .lock-icon { display: inline-block; background: #f44336; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px; }
+        .owner-icon { display: inline-block; background: #ff5722; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px; }
+        .author { text-align: center; color: rgba(255,255,255,0.6); margin-top: 30px; font-size: 0.9rem; }
+        @media (max-width: 900px) { .three-panel { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧾 Accounting SaaS</h1>
+        <p class="subtitle">Complete System Architecture v3.0 - With SaaS Owner Panel - By Ferdous Rahman</p>
+        
+        <div class="tech-stack">
+            <div class="tech-badge"><span>Frontend:</span> React + TypeScript</div>
+            <div class="tech-badge"><span>Backend:</span> Python FastAPI</div>
+            <div class="tech-badge"><span>Database:</span> PostgreSQL</div>
+            <div class="tech-badge"><span>Auth:</span> JWT + OAuth2</div>
+            <div class="tech-badge"><span>Email:</span> Resend</div>
+            <div class="tech-badge"><span>Payment:</span> PayPal / Stripe</div>
+            <div class="tech-badge"><span>Cache:</span> Redis</div>
+            <div class="tech-badge"><span>Storage:</span> S3 / Cloudflare R2</div>
+        </div>
+
+        <!-- System Overview -->
+        <div class="section">
+            <h2 class="section-title">System Overview - Three Independent Panels</h2>
+            
+            <div class="three-panel">
+                <div class="panel owner">
+                    <h3>🔐 SaaS Owner Panel</h3>
+                    <p>Master control panel for platform owner. Manages all tenants, subscriptions, revenue, and system settings.</p>
+                    <p style="margin-top:10px;"><strong>URL:</strong> admin.yourapp.com</p>
+                </div>
+                <div class="panel single">
+                    <h3>📗 Single Entry Panel</h3>
+                    <p>Simple income/expense tracking for small businesses and freelancers.</p>
+                    <p style="margin-top:10px;"><strong>URL:</strong> app.yourapp.com</p>
+                </div>
+                <div class="panel double">
+                    <h3>📘 Double Entry Panel</h3>
+                    <p>Full professional accounting with Chart of Accounts, Vouchers, and Financial Reports.</p>
+                    <p style="margin-top:10px;"><strong>URL:</strong> app.yourapp.com</p>
+                </div>
+            </div>
+
+            <div class="mermaid">
+flowchart TB
+    subgraph SYSTEM["🌐 Accounting SaaS Platform"]
+        direction TB
+        
+        subgraph OWNER["🔐 SaaS Owner Panel"]
+            O1[Platform Dashboard]
+            O2[Tenant Management]
+            O3[Revenue Analytics]
+        end
+        
+        subgraph TENANT["👥 Tenant Panels"]
+            subgraph SINGLE["📗 Single Entry"]
+                S1[Income/Expense]
+            end
+            subgraph DOUBLE["📘 Double Entry"]
+                D1[Vouchers/Ledger]
+            end
+        end
+        
+        subgraph DBS["🗄️ Databases"]
+            DB1[(owner_db)]
+            DB2[(auth_db)]
+            DB3[(single_db)]
+            DB4[(double_db)]
+        end
+    end
+    
+    OWNER --> DB1
+    OWNER --> DB2
+    SINGLE --> DB3
+    DOUBLE --> DB4
+
+    style OWNER fill:#ff5722,stroke:#e64a19,color:#fff
+    style SINGLE fill:#4caf50,stroke:#388e3c,color:#fff
+    style DOUBLE fill:#2196f3,stroke:#1976d2,color:#fff
+            </div>
+        </div>
+
+        <!-- SaaS Owner Panel -->
+        <div class="section owner-section">
+            <h2 class="section-title owner">1. 🔐 SaaS Owner Panel <span class="owner-icon">SUPER ADMIN</span></h2>
+            
+            <div class="owner-box">
+                <h4>🛡️ Access Control</h4>
+                <p>Completely separate from tenant panels. Only platform owners can access via <strong>admin.yourapp.com</strong> with 2FA required.</p>
+            </div>
+
+            <h3 style="color:#e64a19; margin:20px 0 15px;">📊 Owner Dashboard</h3>
+            <div class="mermaid">
+flowchart TB
+    subgraph AUTH["🔐 Owner Login"]
+        A[Admin Login] --> B[Email + Password]
+        B --> C[2FA Code]
+        C --> D{Valid?}
+        D -->|No| E[Denied]
+        D -->|Yes| F[Dashboard]
+    end
+
+    subgraph METRICS["📊 Key Metrics"]
+        F --> G[Overview Cards]
+        G --> G1["👥 Total Tenants"]
+        G --> G2["💰 MRR / ARR"]
+        G --> G3["📈 New Signups"]
+        G --> G4["🔄 Churn Rate"]
+        G --> G5["💳 Pending Payments"]
+        G --> G6["🎫 Support Tickets"]
+    end
+
+    subgraph CHARTS["📈 Analytics"]
+        F --> H[Charts]
+        H --> H1["Revenue Trend"]
+        H --> H2["Signups vs Churn"]
+        H --> H3["Plan Distribution"]
+        H --> H4["Revenue by Type"]
+    end
+
+    style AUTH fill:#ffccbc,stroke:#e64a19
+    style METRICS fill:#ffe0b2,stroke:#ff9800
+    style CHARTS fill:#fff3e0,stroke:#ff9800
+            </div>
+
+            <h3 style="color:#e64a19; margin:30px 0 15px;">👥 Tenant Management</h3>
+            <div class="mermaid">
+flowchart TB
+    subgraph LIST["📋 Tenant List"]
+        A[All Tenants] --> B["Filters"]
+        B --> B1["By Status"]
+        B --> B2["By Plan"]
+        B --> B3["By Type 🔒"]
+        B --> B4["By Date"]
+    end
+
+    subgraph DETAIL["📄 Tenant Details"]
+        A --> C[View Tenant]
+        C --> C1["Company Info"]
+        C --> C2["Accounting Type 🔒"]
+        C --> C3["Current Plan"]
+        C --> C4["Payment History"]
+        C --> C5["User Count"]
+        C --> C6["Usage Stats"]
+    end
+
+    subgraph ACTIONS["⚡ Actions"]
+        C --> D[Tenant Actions]
+        D --> D1["✅ Activate"]
+        D --> D2["⏸️ Suspend"]
+        D --> D3["❌ Deactivate"]
+        D --> D4["🔄 Reset Password"]
+        D --> D5["📧 Send Email"]
+        D --> D6["💳 Adjust Plan"]
+        D --> D7["📊 View Analytics"]
+        D --> D8["🗑️ Delete"]
+    end
+
+    subgraph MANUAL["✋ Manual Ops"]
+        E[Manual Operations]
+        E --> E1["Extend Trial"]
+        E --> E2["Apply Discount"]
+        E --> E3["Record Offline Payment"]
+        E --> E4["Export Data"]
+        E --> E5["Backup/Restore"]
+    end
+
+    style LIST fill:#ffccbc,stroke:#e64a19
+    style DETAIL fill:#ffe0b2,stroke:#ff9800
+    style ACTIONS fill:#fff3e0,stroke:#ff9800
+    style MANUAL fill:#fff8e1,stroke:#ffc107
+            </div>
+
+            <h3 style="color:#e64a19; margin:30px 0 15px;">💰 Revenue & Subscriptions</h3>
+            <div class="mermaid">
+flowchart TB
+    subgraph REVENUE["💰 Revenue"]
+        A[Revenue Dashboard]
+        A --> A1["MRR / ARR"]
+        A --> A2["LTV / CAC"]
+        A --> A3["By Plan"]
+        A --> A4["By Type"]
+    end
+
+    subgraph SUBS["📋 Subscriptions"]
+        B[Subscription List]
+        B --> B1["Active"]
+        B --> B2["Expiring Soon"]
+        B --> B3["Expired"]
+        B --> B4["Trial Users"]
+        B --> B5["Cancelled"]
+    end
+
+    subgraph PAYMENTS["💳 Payments"]
+        C[Payment Records]
+        C --> C1["All Transactions"]
+        C --> C2["Pending"]
+        C --> C3["Failed"]
+        C --> C4["Refunds"]
+        C --> C5["Invoices"]
+    end
+
+    subgraph PLANS["📦 Plan Config"]
+        D[Manage Plans]
+        D --> D1["Single Entry Plans"]
+        D --> D2["Double Entry Plans"]
+        D --> D3["Features & Limits"]
+        D --> D4["Pricing"]
+        D --> D5["Coupon Codes"]
+    end
+
+    style REVENUE fill:#c8e6c9,stroke:#388e3c
+    style SUBS fill:#bbdefb,stroke:#1976d2
+    style PAYMENTS fill:#ffe0b2,stroke:#ff9800
+    style PLANS fill:#e1bee7,stroke:#8e24aa
+            </div>
+
+            <h3 style="color:#e64a19; margin:30px 0 15px;">⚙️ System Settings</h3>
+            <div class="mermaid">
+flowchart TB
+    subgraph SETTINGS["⚙️ Configuration"]
+        A[System Settings]
+        A --> A1["Platform Branding"]
+        A --> A2["Email Templates"]
+        A --> A3["Payment Gateways"]
+        A --> A4["Tax Settings"]
+        A --> A5["Maintenance Mode"]
+    end
+
+    subgraph ADMINS["👤 Admin Users"]
+        B[Admin Management]
+        B --> B1["Add Admin"]
+        B --> B2["Roles & Permissions"]
+        B --> B3["Activity Logs"]
+    end
+
+    subgraph SUPPORT["🎫 Support"]
+        C[Support System]
+        C --> C1["Tickets"]
+        C --> C2["FAQ Management"]
+        C --> C3["Knowledge Base"]
+    end
+
+    subgraph COMMS["📢 Communications"]
+        D[Announcements]
+        D --> D1["System Notices"]
+        D --> D2["Email Campaigns"]
+        D --> D3["In-App Messages"]
+        D --> D4["Maintenance Alerts"]
+    end
+
+    style SETTINGS fill:#ffccbc,stroke:#e64a19
+    style ADMINS fill:#d1c4e9,stroke:#673ab7
+    style SUPPORT fill:#b2dfdb,stroke:#009688
+    style COMMS fill:#fff9c4,stroke:#fbc02d
+            </div>
+
+            <h3 style="color:#e64a19; margin:30px 0 15px;">📊 Reports & Audit</h3>
+            <div class="mermaid">
+flowchart TB
+    subgraph REPORTS["📊 Reports"]
+        A[Report Center]
+        A --> A1["Revenue Report"]
+        A --> A2["Growth Report"]
+        A --> A3["Churn Analysis"]
+        A --> A4["Usage Report"]
+        A --> A5["Tax Report"]
+    end
+
+    subgraph AUDIT["🔍 Audit Logs"]
+        B[Audit Center]
+        B --> B1["Admin Activity"]
+        B --> B2["Tenant Activity"]
+        B --> B3["Security Events"]
+        B --> B4["System Logs"]
+    end
+
+    subgraph EXPORT["📤 Export"]
+        C[Export Options]
+        C --> C1["Excel / PDF"]
+        C --> C2["Scheduled Reports"]
+        C --> C3["API Access"]
+    end
+
+    style REPORTS fill:#e3f2fd,stroke:#1976d2
+    style AUDIT fill:#fce4ec,stroke:#e91e63
+    style EXPORT fill:#f3e5f5,stroke:#9c27b0
+            </div>
+        </div>
+
+        <!-- Registration Flow -->
+        <div class="section">
+            <h2 class="section-title">2. Tenant Registration Flow</h2>
+            
+            <div class="warning-box">
+                <h4>🔒 Accounting Type is PERMANENT</h4>
+                <p>Users must select Single Entry or Double Entry in Step 1. This choice is locked forever.</p>
+            </div>
+
+            <div class="mermaid">
+flowchart TB
+    subgraph ENTRY["🚪 Entry"]
+        A[Landing Page] --> B{New User?}
+    end
+
+    subgraph LOGIN["✅ Login"]
+        B -->|No| C[Login]
+        C --> D[Email + Password]
+        D --> E{Valid?}
+        E -->|No| F[Error] --> D
+        E -->|Yes| G{Active Sub?}
+        G -->|No| H[Renew] --> I[Payment]
+        I --> J
+        G -->|Yes| J{Type?}
+        J -->|Single| K[Single Dashboard]
+        J -->|Double| L[Double Dashboard]
+    end
+
+    subgraph SIGNUP["📝 Registration"]
+        B -->|Yes| M[Signup]
+        
+        M --> N["<b>Step 1: Choose Type</b><br/>🔒 PERMANENT<br/>○ Single Entry<br/>○ Double Entry"]
+        
+        N --> O{Type?}
+        O -->|Single| P1["Single Plans<br/>Free/$5/$12"]
+        O -->|Double| P2["Double Plans<br/>$15/$35/$75"]
+        
+        P1 --> Q
+        P2 --> Q
+        
+        Q["<b>Step 2: Company</b><br/>Name, Email, Phone"]
+        Q --> R["<b>Step 3: Admin</b><br/>Name, Email, Password"]
+        R --> S["<b>Step 4: Preferences</b><br/>Currency, Fiscal Year"]
+        S --> T{Free?}
+        T -->|Yes| V
+        T -->|No| U["<b>Step 5: Payment</b>"]
+        U --> V["<b>Step 6: Complete</b><br/>Create & Email"]
+        V --> C
+    end
+
+    style ENTRY fill:#f5f5f5,stroke:#616161
+    style LOGIN fill:#e8f5e9,stroke:#388e3c
+    style SIGNUP fill:#e3f2fd,stroke:#1976d2
+            </div>
+        </div>
+
+        <!-- Single Entry Panel -->
+        <div class="section">
+            <h2 class="section-title">3. 📗 Single Entry Tenant Panel <span class="lock-icon">LOCKED</span></h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph DASH["📊 Dashboard"]
+        A[Home] --> B1["💰 Income"]
+        A --> B2["💸 Expense"]
+        A --> B3["📈 Balance"]
+    end
+
+    subgraph INCOME["💵 Income"]
+        A --> C[Income]
+        C --> C1["Add Income"]
+        C --> C2["Income List"]
+        C --> C3["Categories"]
+        C --> C4["Recurring"]
+    end
+
+    subgraph EXPENSE["💸 Expense"]
+        A --> D[Expenses]
+        D --> D1["Add Expense"]
+        D --> D2["Expense List"]
+        D --> D3["Categories"]
+        D --> D4["Budget"]
+    end
+
+    subgraph ACCOUNTS["🏦 Accounts"]
+        A --> E[Accounts]
+        E --> E1["Cash"]
+        E --> E2["Bank"]
+        E --> E3["Mobile"]
+        E --> E4["Transfer"]
+    end
+
+    subgraph REPORTS["📈 Reports"]
+        A --> F[Reports]
+        F --> F1["Income vs Expense"]
+        F --> F2["By Category"]
+        F --> F3["Cash Flow"]
+        F --> F4["Export"]
+    end
+
+    subgraph SETTINGS["⚙️ Settings"]
+        A --> G[Settings]
+        G --> G1["Profile"]
+        G --> G2["Users"]
+        G --> G3["Subscription 🔒"]
+    end
+
+    style DASH fill:#c8e6c9,stroke:#4caf50
+    style INCOME fill:#a5d6a7,stroke:#388e3c
+    style EXPENSE fill:#ffcdd2,stroke:#e53935
+    style ACCOUNTS fill:#ffe0b2,stroke:#ff9800
+    style REPORTS fill:#e1bee7,stroke:#8e24aa
+    style SETTINGS fill:#cfd8dc,stroke:#607d8b
+            </div>
+        </div>
+
+        <!-- Double Entry Panel -->
+        <div class="section">
+            <h2 class="section-title">4. 📘 Double Entry Tenant Panel <span class="lock-icon">LOCKED</span></h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph DASH["📊 Dashboard"]
+        A[Home] --> B1["💰 Revenue"]
+        A --> B2["💸 Expenses"]
+        A --> B3["📈 Profit"]
+        A --> B4["🏦 Cash"]
+    end
+
+    subgraph SETUP["🏗️ Setup"]
+        A --> C[Setup]
+        C --> C1["Chart of Accounts"]
+        C --> C2["Voucher Types"]
+        C --> C3["Cost Centers"]
+        C --> C4["Opening Balance"]
+        C --> C5["Fiscal Periods"]
+    end
+
+    subgraph TXN["💰 Transactions"]
+        A --> D[Vouchers]
+        D --> D1["Create Voucher"]
+        D --> D2["Drafts"]
+        D --> D3["Posted"]
+        D --> D4["Revise/Reverse"]
+    end
+
+    subgraph REPORTS["📈 Reports"]
+        A --> E[Reports]
+        E --> E1["Day Books"]
+        E --> E2["General Ledger"]
+        E --> E3["Trial Balance"]
+        E --> E4["P&L"]
+        E --> E5["Balance Sheet"]
+        E --> E6["Cash Flow"]
+    end
+
+    subgraph SETTINGS["⚙️ Settings"]
+        A --> F[Settings]
+        F --> F1["Organization"]
+        F --> F2["Users & Roles"]
+        F --> F3["Audit Logs"]
+        F --> F4["Subscription 🔒"]
+    end
+
+    style DASH fill:#bbdefb,stroke:#1976d2
+    style SETUP fill:#c8e6c9,stroke:#388e3c
+    style TXN fill:#ffe0b2,stroke:#ff9800
+    style REPORTS fill:#e1bee7,stroke:#8e24aa
+    style SETTINGS fill:#cfd8dc,stroke:#607d8b
+            </div>
+        </div>
+
+        <!-- Backend Architecture -->
+        <div class="section">
+            <h2 class="section-title">5. Backend Architecture</h2>
+            <div class="mermaid">
+flowchart TB
+    subgraph FE["🖥️ Frontends"]
+        F1["Owner Panel<br/>admin.yourapp.com"]
+        F2["Tenant Panel<br/>app.yourapp.com"]
+    end
+
+    subgraph GW["🚪 API Gateway"]
+        G[Nginx / Traefik]
+    end
+
+    subgraph API["🔧 FastAPI Services"]
+        A1["owner-api"]
+        A2["auth-api"]
+        A3["subscription-api"]
+        A4["single-entry-api"]
+        A5["double-entry-api"]
+        A6["notification-api"]
+    end
+
+    subgraph DB["🗄️ Databases"]
+        D1[("owner_db")]
+        D2[("auth_db")]
+        D3[("single_entry_db")]
+        D4[("double_entry_db")]
+    end
+
+    subgraph CACHE["⚡ Cache"]
+        R1[(Redis)]
+        R2[Celery Workers]
+    end
+
+    subgraph EXT["🌐 External"]
+        E1[Resend]
+        E2[PayPal]
+        E3[Stripe]
+        E4[S3/R2]
+    end
+
+    F1 --> G
+    F2 --> G
+    G --> API
+    A1 --> D1
+    A2 --> D2
+    A3 --> D2
+    A4 --> D3
+    A5 --> D4
+    API --> CACHE
+    A6 --> EXT
+
+    style FE fill:#e3f2fd,stroke:#1976d2
+    style GW fill:#fff3e0,stroke:#ff9800
+    style API fill:#e8f5e9,stroke:#388e3c
+    style DB fill:#fce4ec,stroke:#e91e63
+    style CACHE fill:#f3e5f5,stroke:#9c27b0
+    style EXT fill:#e0f7fa,stroke:#00acc1
+            </div>
+        </div>
+
+        <!-- Database Schema -->
+        <div class="section">
+            <h2 class="section-title">6. Database Schema</h2>
+            
+            <h3 style="color:#ff5722; margin:20px 0 15px;">🔐 Owner Database</h3>
+            <div class="mermaid">
+erDiagram
+    platform_admins {
+        uuid id PK
+        string name
+        string email
+        string password_hash
+        enum role "super_admin|finance|support"
+        boolean is_2fa_enabled
+        timestamp last_login
+    }
+    
+    admin_activity_logs {
+        uuid id PK
+        uuid admin_id FK
+        string action
+        string target_type
+        uuid target_id
+        json details
+        timestamp created_at
+    }
+    
+    announcements {
+        uuid id PK
+        string title
+        text content
+        enum type "info|warning|maintenance"
+        boolean is_active
+        timestamp start_at
+        timestamp end_at
+    }
+    
+    support_tickets {
+        uuid id PK
+        uuid tenant_id
+        string subject
+        text description
+        enum status "open|in_progress|resolved|closed"
+        enum priority "low|medium|high"
+        uuid assigned_to FK
+        timestamp created_at
+    }
+
+    platform_admins ||--o{ admin_activity_logs : creates
+    platform_admins ||--o{ support_tickets : handles
+            </div>
+
+            <h3 style="color:#9c27b0; margin:30px 0 15px;">🔑 Auth Database (Shared)</h3>
+            <div class="mermaid">
+erDiagram
+    tenants ||--o{ users : has
+    tenants ||--o{ subscriptions : has
+    subscriptions ||--o{ payments : has
+    
+    tenants {
+        uuid id PK
+        string company_name
+        string email
+        string phone
+        enum accounting_type "LOCKED: single|double"
+        string currency
+        date fiscal_year_start
+        string timezone
+        boolean is_active
+        timestamp created_at
+    }
+    
+    users {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        string email
+        string password_hash
+        enum role "admin|accountant|viewer"
+        boolean is_active
+        timestamp last_login
+    }
+    
+    subscriptions {
+        uuid id PK
+        uuid tenant_id FK
+        enum plan "free|basic|pro|starter|business|enterprise"
+        enum billing_cycle "monthly|yearly"
+        date start_date
+        date end_date
+        enum status "active|trial|expired|cancelled"
+        decimal amount
+    }
+    
+    payments {
+        uuid id PK
+        uuid subscription_id FK
+        uuid tenant_id
+        decimal amount
+        string currency
+        enum provider "paypal|stripe|bkash|manual"
+        string provider_txn_id
+        enum status "pending|completed|failed|refunded"
+        timestamp paid_at
+    }
+            </div>
+
+            <h3 style="color:#4caf50; margin:30px 0 15px;">📗 Single Entry Database</h3>
+            <div class="mermaid">
+erDiagram
+    money_accounts ||--o{ transactions : has
+    categories ||--o{ transactions : categorizes
+    
+    money_accounts {
+        uuid id PK
+        uuid tenant_id
+        string name
+        enum type "cash|bank|mobile"
+        decimal balance
+        boolean is_active
+    }
+    
+    categories {
+        uuid id PK
+        uuid tenant_id
+        string name
+        enum type "income|expense"
+        string icon
+        string color
+    }
+    
+    transactions {
+        uuid id PK
+        uuid tenant_id
+        uuid account_id FK
+        uuid category_id FK
+        enum type "income|expense|transfer"
+        decimal amount
+        date txn_date
+        string reference
+        string note
+        string receipt_url
+        timestamp created_at
+    }
+    
+    recurring_transactions {
+        uuid id PK
+        uuid tenant_id
+        uuid category_id FK
+        uuid account_id FK
+        enum type "income|expense"
+        decimal amount
+        enum frequency "daily|weekly|monthly|yearly"
+        date next_date
+        boolean is_active
+    }
+            </div>
+
+            <h3 style="color:#1976d2; margin:30px 0 15px;">📘 Double Entry Database</h3>
+            <div class="mermaid">
+erDiagram
+    accounts ||--o{ voucher_items : has
+    vouchers ||--o{ voucher_items : contains
+    voucher_types ||--o{ vouchers : categorizes
+    
+    accounts {
+        uuid id PK
+        uuid tenant_id
+        string code
+        string name
+        enum type "asset|liability|equity|revenue|expense"
+        uuid parent_id FK
+        decimal opening_balance
+        boolean is_active
+    }
+    
+    voucher_types {
+        uuid id PK
+        uuid tenant_id
+        string code
+        string name
+        string prefix
+        int next_number
+    }
+    
+    vouchers {
+        uuid id PK
+        uuid tenant_id
+        uuid voucher_type_id FK
+        string voucher_no
+        date voucher_date
+        string narration
+        enum status "draft|posted|reversed"
+        uuid created_by
+        timestamp posted_at
+    }
+    
+    voucher_items {
+        uuid id PK
+        uuid voucher_id FK
+        uuid account_id FK
+        decimal debit_amount
+        decimal credit_amount
+        string particulars
+    }
+    
+    cost_centers {
+        uuid id PK
+        uuid tenant_id
+        string code
+        string name
+        enum type "department|project|branch"
+    }
+    
+    fiscal_periods {
+        uuid id PK
+        uuid tenant_id
+        string name
+        date start_date
+        date end_date
+        boolean is_closed
+    }
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="section">
+            <h2 class="section-title">7. Pricing Plans</h2>
+            <div class="mermaid">
+flowchart LR
+    subgraph SINGLE["📗 SINGLE ENTRY"]
+        S1["<b>🆓 Free</b><br/>$0/mo<br/>• 1 User<br/>• 50 Txn/mo<br/>• Basic Reports"]
+        S2["<b>⭐ Basic</b><br/>$5/mo<br/>• 3 Users<br/>• 500 Txn/mo<br/>• All Reports<br/>• PDF Export"]
+        S3["<b>💎 Pro</b><br/>$12/mo<br/>• 10 Users<br/>• Unlimited Txn<br/>• Recurring<br/>• API Access"]
+    end
+
+    subgraph DOUBLE["📘 DOUBLE ENTRY"]
+        D1["<b>🚀 Starter</b><br/>$15/mo<br/>• 3 Users<br/>• 500 Vouchers/mo<br/>• Standard Reports"]
+        D2["<b>⭐ Business</b><br/>$35/mo<br/>• 10 Users<br/>• 2000 Vouchers/mo<br/>• Cost Centers<br/>• Multi-Currency"]
+        D3["<b>💎 Enterprise</b><br/>$75/mo<br/>• Unlimited<br/>• Multi-Branch<br/>• Audit Logs<br/>• API + White Label"]
+    end
+
+    style SINGLE fill:#e8f5e9,stroke:#4caf50
+    style DOUBLE fill:#e3f2fd,stroke:#1976d2
+            </div>
+        </div>
+
+        <div class="author">
+            Designed by Ferdous Rahman | v3.0 - Complete with SaaS Owner Panel<br/>
+            Frontend: React + TypeScript | Backend: FastAPI | Database: PostgreSQL (4 Separate Databases)
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>
