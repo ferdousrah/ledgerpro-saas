@@ -63,6 +63,7 @@ class Tenant(Base):
     company_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
     phone = Column(String(50))
+    address = Column(String, nullable=True)
 
     # CRITICAL: This is LOCKED after registration
     accounting_type = Column(Enum(AccountingType), nullable=False)
@@ -71,6 +72,16 @@ class Tenant(Base):
     currency = Column(String(10), default="USD")
     fiscal_year_start = Column(Date, nullable=False)
     timezone = Column(String(50), default="UTC")
+    date_format = Column(String(20), default="DD/MM/YYYY")
+    logo_url = Column(String(500), nullable=True)
+
+    # PDF Settings (margins in millimeters)
+    pdf_top_margin = Column(Integer, default=70)  # Space for company letterhead
+    pdf_bottom_margin = Column(Integer, default=20)  # Space for footer
+
+    # Tax Settings
+    default_tax_rate = Column(Numeric(5, 2), nullable=False, default=0.00)  # Default tax rate percentage (e.g., 15.00 for 15%)
+    tax_label = Column(String(20), nullable=False, default="Tax")  # Tax label: Tax, VAT, or GST
 
     # Status
     is_active = Column(Boolean, default=True)
@@ -80,6 +91,7 @@ class Tenant(Base):
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     subscriptions = relationship("Subscription", back_populates="tenant", cascade="all, delete-orphan")
+    activity_logs = relationship("ActivityLog", back_populates="tenant", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -101,6 +113,7 @@ class User(Base):
 
     # Relationships
     tenant = relationship("Tenant", back_populates="users")
+    activity_logs = relationship("ActivityLog", back_populates="user", cascade="all, delete-orphan")
 
 
 class Subscription(Base):

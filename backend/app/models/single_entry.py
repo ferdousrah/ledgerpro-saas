@@ -159,6 +159,7 @@ class Transaction(Base):
     account_id = Column(UUID(as_uuid=True), ForeignKey("money_accounts.id", ondelete="CASCADE"), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True)
     partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id", ondelete="SET NULL"), nullable=True, index=True)
+    fiscal_year_id = Column(UUID(as_uuid=True), ForeignKey("financial_years.id", ondelete="RESTRICT"), nullable=True, index=True)
 
     transaction_type = Column(Enum(TransactionType), nullable=False, index=True)
     amount = Column(Numeric(15, 2), nullable=False)
@@ -183,6 +184,7 @@ class Transaction(Base):
     category = relationship("Category", back_populates="transactions")
     partner = relationship("Partner", back_populates="transactions")
     recurring_transaction = relationship("RecurringTransaction", back_populates="transactions")
+    fiscal_year = relationship("FinancialYear", back_populates="transactions")
 
 
 class RecurringTransaction(Base):

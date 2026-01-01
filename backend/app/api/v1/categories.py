@@ -1,20 +1,21 @@
 """
 Categories API endpoints for Single Entry accounting
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
 from ...database import get_db
-from ...models.auth import Tenant
+from ...models.auth import Tenant, User
 from ...models.single_entry import Category, TransactionType
 from ...schemas.single_entry import (
     CategoryCreate,
     CategoryUpdate,
     CategoryResponse,
 )
-from ..deps import get_current_tenant
+from ..deps import get_current_tenant, get_current_user
+from .activity_logs import log_activity
 
 router = APIRouter()
 
@@ -75,6 +76,8 @@ def get_category(
 @router.post("/", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(
     category_data: CategoryCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -111,6 +114,18 @@ def create_category(
     db.commit()
     db.refresh(new_category)
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="create",
+        entity_type="CATEGORY",
+        entity_id=str(new_category.id),
+        entity_name=new_category.name,
+        description=f"Created category: {new_category.name} ({new_category.transaction_type.value})",
+        request=request,
+    )
+
     return new_category
 
 
@@ -118,6 +133,8 @@ def create_category(
 def update_category(
     category_id: UUID,
     category_data: CategoryUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -164,12 +181,26 @@ def update_category(
     db.commit()
     db.refresh(category)
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="update",
+        entity_type="CATEGORY",
+        entity_id=str(category.id),
+        entity_name=category.name,
+        description=f"Updated category: {category.name}",
+        request=request,
+    )
+
     return category
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(
     category_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -196,7 +227,23 @@ def delete_category(
             detail="Cannot delete category with existing transactions. Consider deactivating instead."
         )
 
+    # Save category info for logging
+    category_name = category.name
+    category_id_str = str(category.id)
+
     db.delete(category)
     db.commit()
+
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="delete",
+        entity_type="CATEGORY",
+        entity_id=category_id_str,
+        entity_name=category_name,
+        description=f"Deleted category: {category_name}",
+        request=request,
+    )
 
     return None

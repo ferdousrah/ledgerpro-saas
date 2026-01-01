@@ -22,11 +22,13 @@ import {
   Snackbar,
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import { Add, Edit, Delete, TrendingUp } from '@mui/icons-material';
+import { Add, Edit, Delete, TrendingUp, Warning as WarningIcon } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { transactionsApi, accountsApi, categoriesApi, TransactionType, type Transaction, type TransactionCreate, type MoneyAccount, type Category } from '../services/singleEntryApi';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
+import { formatDate } from '../utils/dateFormatter';
 
 export default function IncomePage() {
   const { tenant } = useAuthStore();
@@ -38,6 +40,9 @@ export default function IncomePage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   const [formData, setFormData] = useState<TransactionCreate>({
     account_id: '',
@@ -120,17 +125,36 @@ export default function IncomePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) return;
+  const openConfirmDialog = (message: string, action: () => void) => {
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setConfirmDialogOpen(true);
+  };
 
-    try {
-      setError('');
-      await transactionsApi.delete(id);
-      await loadData();
-      setSuccessMessage('Income deleted successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete transaction');
+  const handleConfirm = () => {
+    if (confirmAction) {
+      confirmAction();
     }
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    openConfirmDialog('Are you sure you want to delete this transaction?', async () => {
+      try {
+        setError('');
+        await transactionsApi.delete(id);
+        await loadData();
+        setSuccessMessage('Income deleted successfully');
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Failed to delete transaction');
+      }
+    });
   };
 
   const getAccountName = (accountId: string) => {
@@ -205,7 +229,7 @@ export default function IncomePage() {
                     field: 'transaction_date',
                     headerName: 'Date',
                     width: 130,
-                    valueFormatter: (params) => new Date(params).toLocaleDateString(),
+                    valueFormatter: (params) => formatDate(params, tenant?.date_format || 'DD/MM/YYYY'),
                   },
                   {
                     field: 'account_id',
@@ -290,9 +314,13 @@ export default function IncomePage() {
                 disableRowSelectionOnClick
                 getRowHeight={() => 'auto'}
                 sx={{
+                  '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: 'background.default',
+                  },
                   '& .MuiDataGrid-cell': {
                     display: 'flex',
                     alignItems: 'center',
+                    borderColor: 'divider',
                   },
                 }}
               />
@@ -303,7 +331,10 @@ export default function IncomePage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingTransaction ? 'Edit Income' : 'Add Income'}</DialogTitle>
+        <DialogHeader
+          title={editingTransaction ? 'Edit Income' : 'Add Income'}
+          onClose={handleCloseDialog}
+        />
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -390,6 +421,26 @@ export default function IncomePage() {
           >
             {editingTransaction ? 'Update' : 'Add'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onClose={handleCancelConfirm} maxWidth="xs" fullWidth>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Action</Typography>
+            </Box>
+          }
+          onClose={handleCancelConfirm}
+        />
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>{confirmMessage}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelConfirm} variant="outlined">Cancel</Button>
+          <Button onClick={handleConfirm} variant="contained" color="error" autoFocus>Confirm</Button>
         </DialogActions>
       </Dialog>
 

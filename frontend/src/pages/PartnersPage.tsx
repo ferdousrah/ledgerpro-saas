@@ -28,6 +28,7 @@ import {
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { Add, Edit, Delete, People, Warning as WarningIcon } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { partnersApi, PartnerCategory, type Partner, type PartnerCreate } from '../services/singleEntryApi';
 
 export default function PartnersPage() {
@@ -1073,9 +1074,13 @@ export default function PartnersPage() {
                 disableRowSelectionOnClick
                 getRowHeight={() => 'auto'}
                 sx={{
+                  '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: 'background.default',
+                  },
                   '& .MuiDataGrid-cell': {
                     display: 'flex',
                     alignItems: 'center',
+                    borderColor: 'divider',
                   },
                 }}
               />
@@ -1086,7 +1091,7 @@ export default function PartnersPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>{editingPartner ? 'Edit Partner' : 'Add Partner'}</DialogTitle>
+        <DialogHeader title={editingPartner ? 'Edit Partner' : 'Add Partner'} onClose={handleCloseDialog} />
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <Box mt={1}>
@@ -1107,12 +1112,15 @@ export default function PartnersPage() {
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmDialogOpen} onClose={handleCancelConfirm} maxWidth="xs" fullWidth>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <WarningIcon color="warning" />
-            <Typography variant="h6">Confirm Action</Typography>
-          </Box>
-        </DialogTitle>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Action</Typography>
+            </Box>
+          }
+          onClose={handleCancelConfirm}
+        />
         <DialogContent>
           <Typography variant="body1" sx={{ mt: 1 }}>{confirmMessage}</Typography>
         </DialogContent>

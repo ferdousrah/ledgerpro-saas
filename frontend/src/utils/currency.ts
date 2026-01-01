@@ -24,7 +24,22 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   MXN: '$',
   AED: 'د.إ',
   SAR: '﷼',
+  CHF: 'CHF',
+  SEK: 'kr',
+  NOK: 'kr',
+  DKK: 'kr',
 };
+
+// Currencies where symbol appears AFTER the amount
+const SUFFIX_CURRENCIES = new Set([
+  'BDT',  // Bangladesh: 100 ৳
+  'AED',  // UAE: 100 د.إ
+  'SAR',  // Saudi Arabia: 100 ﷼
+  'CHF',  // Switzerland: 100 CHF
+  'SEK',  // Sweden: 100 kr
+  'NOK',  // Norway: 100 kr
+  'DKK',  // Denmark: 100 kr
+]);
 
 /**
  * Get currency symbol for a given currency code
@@ -36,31 +51,56 @@ export function getCurrencySymbol(currencyCode: string): string {
 /**
  * Format amount with currency symbol
  */
-export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
-  const symbol = getCurrencySymbol(currencyCode);
-  const formattedAmount = amount.toFixed(2);
+export function formatCurrency(amount: number | string, currencyCode: string = 'USD'): string {
+  const code = currencyCode.toUpperCase();
+  const symbol = getCurrencySymbol(code);
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const formattedAmount = (numericAmount || 0).toFixed(2);
 
-  // For some currencies like USD, symbol comes before amount
-  // For others like EUR, it might come after
-  const prefixSymbols = ['$', '£', '¥', '₹', '৳', '₨', 'A$', 'C$', 'S$', 'RM', '฿', '₩', '₽', 'R', 'R$', 'د.إ', '﷼'];
-
-  if (prefixSymbols.includes(symbol)) {
-    return `${symbol}${formattedAmount}`;
-  } else {
+  // Check if currency symbol should appear after the amount
+  if (SUFFIX_CURRENCIES.has(code)) {
     return `${formattedAmount} ${symbol}`;
+  } else {
+    return `${symbol}${formattedAmount}`;
   }
 }
 
 /**
  * Format amount with currency symbol (supports negative values with color)
  */
-export function formatCurrencyWithSign(amount: number, currencyCode: string = 'USD'): { text: string; isNegative: boolean } {
-  const isNegative = amount < 0;
-  const absAmount = Math.abs(amount);
+export function formatCurrencyWithSign(amount: number | string, currencyCode: string = 'USD'): { text: string; isNegative: boolean } {
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const isNegative = numericAmount < 0;
+  const absAmount = Math.abs(numericAmount);
   const formatted = formatCurrency(absAmount, currencyCode);
 
   return {
     text: isNegative ? `-${formatted}` : formatted,
     isNegative
   };
+}
+
+/**
+ * Format currency for PDF (uses currency code instead of symbol for non-ASCII currencies)
+ * This avoids Unicode rendering issues in PDF fonts
+ */
+export function formatCurrencyForPDF(amount: number | string, currencyCode: string = 'USD'): string {
+  const code = currencyCode.toUpperCase();
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const formattedAmount = (numericAmount || 0).toFixed(2);
+
+  // Currencies that work well with standard PDF fonts (ASCII-safe)
+  const SAFE_CURRENCIES = new Set(['USD', 'EUR', 'GBP']);
+
+  if (SAFE_CURRENCIES.has(code)) {
+    const symbol = getCurrencySymbol(code);
+    if (SUFFIX_CURRENCIES.has(code)) {
+      return `${formattedAmount} ${symbol}`;
+    } else {
+      return `${symbol}${formattedAmount}`;
+    }
+  } else {
+    // Use currency code instead of symbol for non-ASCII currencies
+    return `${code} ${formattedAmount}`;
+  }
 }

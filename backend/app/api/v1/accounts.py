@@ -1,7 +1,7 @@
 """
 Money Accounts API endpoints for Single Entry accounting
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -16,6 +16,7 @@ from ...schemas.single_entry import (
     MoneyAccountResponse,
 )
 from ..deps import get_current_user, get_current_tenant
+from .activity_logs import log_activity
 
 router = APIRouter()
 
@@ -67,6 +68,8 @@ def get_account(
 @router.post("/", response_model=MoneyAccountResponse, status_code=status.HTTP_201_CREATED)
 def create_account(
     account_data: MoneyAccountCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -104,6 +107,18 @@ def create_account(
     db.commit()
     db.refresh(new_account)
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="create",
+        entity_type="ACCOUNT",
+        entity_id=str(new_account.id),
+        entity_name=new_account.name,
+        description=f"Created account: {new_account.name}",
+        request=request,
+    )
+
     return new_account
 
 
@@ -111,6 +126,8 @@ def create_account(
 def update_account(
     account_id: UUID,
     account_data: MoneyAccountUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -156,12 +173,26 @@ def update_account(
     db.commit()
     db.refresh(account)
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="update",
+        entity_type="ACCOUNT",
+        entity_id=str(account.id),
+        entity_name=account.name,
+        description=f"Updated account: {account.name}",
+        request=request,
+    )
+
     return account
 
 
 @router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_account(
     account_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
     current_tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
@@ -188,7 +219,23 @@ def delete_account(
             detail="Cannot delete account with existing transactions. Consider deactivating instead."
         )
 
+    # Save account info for logging
+    account_name = account.name
+    account_id_str = str(account.id)
+
     db.delete(account)
     db.commit()
+
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type="delete",
+        entity_type="ACCOUNT",
+        entity_id=account_id_str,
+        entity_name=account_name,
+        description=f"Deleted account: {account_name}",
+        request=request,
+    )
 
     return None

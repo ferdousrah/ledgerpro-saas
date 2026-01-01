@@ -1,12 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .api.v1 import api_router
 from .database import engine, Base
+from pathlib import Path
 
 # Import models to register them with SQLAlchemy
 from .models import auth  # noqa: F401
 from .models import single_entry  # noqa: F401
+from .models import activity_log  # noqa: F401
+from .models import fiscal_year  # noqa: F401
+from .models import invoice  # noqa: F401
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -30,8 +35,13 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Include API routes
+# Include API routes FIRST
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+# Mount static files directory AFTER API routes
+static_dir = Path(__file__).parent / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 @app.get("/")

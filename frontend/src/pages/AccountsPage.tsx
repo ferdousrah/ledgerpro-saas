@@ -22,8 +22,9 @@ import {
   Snackbar,
 } from '@mui/material';
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import { Add, Edit, Delete, AccountBalance } from '@mui/icons-material';
+import { Add, Edit, Delete, AccountBalance, Warning as WarningIcon } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { accountsApi, AccountType, type MoneyAccount, type MoneyAccountCreate } from '../services/singleEntryApi';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
@@ -36,6 +37,9 @@ export default function AccountsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingAccount, setEditingAccount] = useState<MoneyAccount | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   const [formData, setFormData] = useState<MoneyAccountCreate>({
     name: '',
@@ -112,17 +116,36 @@ export default function AccountsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this account?')) return;
+  const openConfirmDialog = (message: string, action: () => void) => {
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setConfirmDialogOpen(true);
+  };
 
-    try {
-      setError('');
-      await accountsApi.delete(id);
-      await loadAccounts();
-      setSuccessMessage('Account deleted successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete account');
+  const handleConfirm = () => {
+    if (confirmAction) {
+      confirmAction();
     }
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleCancelConfirm = () => {
+    setConfirmDialogOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    openConfirmDialog('Are you sure you want to delete this account?', async () => {
+      try {
+        setError('');
+        await accountsApi.delete(id);
+        await loadAccounts();
+        setSuccessMessage('Account deleted successfully');
+      } catch (err: any) {
+        setError(err.response?.data?.detail || 'Failed to delete account');
+      }
+    });
   };
 
   const getAccountTypeLabel = (type: AccountType) => {
@@ -314,9 +337,13 @@ export default function AccountsPage() {
                 disableRowSelectionOnClick
                 getRowHeight={() => 'auto'}
                 sx={{
+                  '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: 'background.default',
+                  },
                   '& .MuiDataGrid-cell': {
                     display: 'flex',
                     alignItems: 'center',
+                    borderColor: 'divider',
                   },
                 }}
               />
@@ -327,9 +354,10 @@ export default function AccountsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingAccount ? 'Edit Account' : 'Add New Account'}
-        </DialogTitle>
+        <DialogHeader
+          title={editingAccount ? 'Edit Account' : 'Add New Account'}
+          onClose={handleCloseDialog}
+        />
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -414,6 +442,26 @@ export default function AccountsPage() {
           <Button onClick={handleSave} variant="contained" disabled={!formData.name}>
             {editingAccount ? 'Update' : 'Create'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onClose={handleCancelConfirm} maxWidth="xs" fullWidth>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Action</Typography>
+            </Box>
+          }
+          onClose={handleCancelConfirm}
+        />
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>{confirmMessage}</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelConfirm} variant="outlined">Cancel</Button>
+          <Button onClick={handleConfirm} variant="contained" color="error" autoFocus>Confirm</Button>
         </DialogActions>
       </Dialog>
 

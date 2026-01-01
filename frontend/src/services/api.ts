@@ -19,15 +19,103 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 responses
+// Handle 401 responses with automatic token refresh
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value?: any) => void; reject: (reason?: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Skip refresh logic for auth endpoints
+    if (originalRequest.url?.includes('/auth/login') ||
+        originalRequest.url?.includes('/auth/register') ||
+        originalRequest.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
     }
+
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        // No refresh token, redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        // Call refresh endpoint with refresh token
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${refreshToken}`,
+            },
+          }
+        );
+
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+
+        // Update tokens in localStorage
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', newRefreshToken);
+
+        // Update auth header for original request
+        originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
+
+        // Process queued requests
+        processQueue(null, access_token);
+
+        isRefreshing = false;
+
+        // Retry original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed, logout user
+        processQueue(refreshError, null);
+        isRefreshing = false;
+
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+
+        return Promise.reject(refreshError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -64,8 +152,31 @@ export const authAPI = {
     await api.put('/auth/password', data);
   },
 
-  updateTenantSettings: async (data: { company_name?: string; currency?: string }) => {
+  // Update tenant settings including tax label configuration
+  updateTenantSettings: async (data: {
+    company_name?: string;
+    currency?: string;
+    date_format?: string;
+    logo_url?: string;
+    pdf_top_margin?: number;
+    pdf_bottom_margin?: number;
+    default_tax_rate?: number;
+    tax_label?: string;
+  }) => {
     const response = await api.put('/auth/tenant-settings', data);
     return response.data;
+  },
+
+  uploadLogo: async (formData: FormData): Promise<{ url: string; filename: string; message: string }> => {
+    const response = await api.post('/upload/logo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  deleteLogo: async (): Promise<void> => {
+    await api.delete('/upload/logo');
   },
 };

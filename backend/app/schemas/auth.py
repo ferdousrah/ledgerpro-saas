@@ -76,9 +76,16 @@ class TenantBase(BaseModel):
     company_name: str
     email: EmailStr
     phone: Optional[str] = None
+    address: Optional[str] = None
     currency: str = "USD"
     fiscal_year_start: date
     timezone: str = "UTC"
+    date_format: str = "DD/MM/YYYY"
+    logo_url: Optional[str] = None
+    pdf_top_margin: int = 70  # Space for company letterhead (mm)
+    pdf_bottom_margin: int = 20  # Space for footer (mm)
+    default_tax_rate: float = 0.00  # Default tax rate percentage (e.g., 15.00 for 15%)
+    tax_label: str = "Tax"  # Tax label: Tax, VAT, or GST
 
 
 class TenantCreate(TenantBase):
@@ -117,6 +124,21 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class UserCreateRequest(BaseModel):
+    """Create a new user (for admins to add team members)"""
+    name: str = Field(..., min_length=2, max_length=255)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    role: UserRole = UserRole.ACCOUNTANT
+
+
+class UserUpdateRequest(BaseModel):
+    """Update user information (for admins)"""
+    name: Optional[str] = Field(None, min_length=2, max_length=255)
+    email: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
 
 
 # ============= AUTH SCHEMAS =============
@@ -169,6 +191,14 @@ class UserPasswordUpdate(BaseModel):
 
 
 class TenantSettingsUpdate(BaseModel):
-    """Update tenant settings (company name and currency)"""
+    """Update tenant settings (company name, phone, address, currency, date format, logo, PDF margins, and default tax rate)"""
     company_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
+    address: Optional[str] = None
     currency: Optional[str] = Field(None, max_length=10)
+    date_format: Optional[str] = Field(None, max_length=20)
+    logo_url: Optional[str] = Field(None, max_length=500)
+    pdf_top_margin: Optional[int] = Field(None, ge=0, le=200)  # 0-200mm
+    pdf_bottom_margin: Optional[int] = Field(None, ge=0, le=200)  # 0-200mm
+    default_tax_rate: Optional[float] = Field(None, ge=0, le=100)  # 0-100%
+    tax_label: Optional[str] = Field(None, pattern="^(Tax|VAT|GST)$")  # Tax, VAT, or GST

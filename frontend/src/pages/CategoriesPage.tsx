@@ -26,6 +26,7 @@ import {
 import { DataGrid, GridToolbar } from '@mui/x-data-grid';
 import { Add, Edit, Delete, Category as CategoryIcon, Warning as WarningIcon } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { categoriesApi, TransactionType, type Category, type CategoryCreate } from '../services/singleEntryApi';
 
 export default function CategoriesPage() {
@@ -207,16 +208,17 @@ export default function CategoriesPage() {
                     headerName: 'Category Name',
                     flex: 1,
                     minWidth: 200,
-                    renderCell: (params) => (
-                      <Typography variant="body2" fontWeight="medium">
-                        {params.value}
-                      </Typography>
-                    ),
+                    headerAlign: 'left',
+                    align: 'left',
                   },
                   {
                     field: 'color',
                     headerName: 'Color',
                     width: 100,
+                    headerAlign: 'center',
+                    align: 'center',
+                    disableColumnMenu: true,
+                    cellClassName: 'center-cell',
                     renderCell: (params) =>
                       params.value ? (
                         <Box
@@ -238,14 +240,18 @@ export default function CategoriesPage() {
                   {
                     field: 'description',
                     headerName: 'Description',
-                    flex: 1,
+                    flex: 1.5,
                     minWidth: 250,
-                    valueGetter: (params) => params || '-',
+                    headerAlign: 'left',
+                    align: 'left',
                   },
                   {
                     field: 'is_active',
                     headerName: 'Status',
                     width: 110,
+                    headerAlign: 'center',
+                    align: 'center',
+                    disableColumnMenu: true,
                     renderCell: (params) => (
                       <Chip
                         label={params.value ? 'Active' : 'Inactive'}
@@ -258,8 +264,11 @@ export default function CategoriesPage() {
                     field: 'actions',
                     headerName: 'Actions',
                     width: 120,
+                    headerAlign: 'center',
+                    align: 'center',
                     sortable: false,
                     filterable: false,
+                    disableColumnMenu: true,
                     renderCell: (params) => (
                       <Box>
                         <Tooltip title="Edit" arrow>
@@ -300,6 +309,20 @@ export default function CategoriesPage() {
                 }}
                 pageSizeOptions={[5, 10, 25, 50]}
                 disableRowSelectionOnClick
+                disableColumnFilter={false}
+                sx={{
+                  '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: 'background.default',
+                  },
+                  '& .MuiDataGrid-cell': {
+                    borderColor: 'divider',
+                  },
+                  '& .center-cell': {
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                }}
               />
             </Box>
           )}
@@ -308,9 +331,10 @@ export default function CategoriesPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCategory ? 'Edit Category' : 'Add New Category'}
-        </DialogTitle>
+        <DialogHeader
+          title={editingCategory ? 'Edit Category' : 'Add New Category'}
+          onClose={handleCloseDialog}
+        />
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -375,7 +399,7 @@ export default function CategoriesPage() {
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
-              value={formData.is_active}
+              value={formData.is_active ? "true" : "false"}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
               label="Status"
             >
@@ -394,12 +418,15 @@ export default function CategoriesPage() {
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmDialogOpen} onClose={handleCancelConfirm} maxWidth="xs" fullWidth>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <WarningIcon color="warning" />
-            <Typography variant="h6">Confirm Action</Typography>
-          </Box>
-        </DialogTitle>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Action</Typography>
+            </Box>
+          }
+          onClose={handleCancelConfirm}
+        />
         <DialogContent>
           <Typography variant="body1" sx={{ mt: 1 }}>{confirmMessage}</Typography>
         </DialogContent>

@@ -10,6 +10,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isLocked: boolean;
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
@@ -18,6 +19,7 @@ interface AuthState {
   setAuth: (authResponse: AuthResponse) => void;
   setUser: (user: User) => void;
   setTenant: (tenant: Tenant) => void;
+  setLocked: (locked: boolean) => void;
   clearAuth: () => void;
 }
 
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isLocked: false,
 
       setAuth: (authResponse: AuthResponse) => {
         localStorage.setItem('access_token', authResponse.access_token);
@@ -86,6 +89,10 @@ export const useAuthStore = create<AuthState>()(
         set({ tenant });
       },
 
+      setLocked: (locked: boolean) => {
+        set({ isLocked: locked });
+      },
+
       clearAuth: () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -96,6 +103,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          isLocked: false,
         });
       },
     }),
@@ -107,6 +115,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        isLocked: state.isLocked,
       }),
     }
   )

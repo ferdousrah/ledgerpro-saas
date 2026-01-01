@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, date as dt_date
 from uuid import UUID
@@ -30,12 +30,14 @@ from ...core.security import (
 )
 from ...config import settings
 from ..deps import get_current_user
+from .activity_logs import log_activity
+from ...models.activity_log import ActivityType, ActivityEntity
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(registration: RegistrationComplete, db: Session = Depends(get_db)):
+def register(registration: RegistrationComplete, request: Request, db: Session = Depends(get_db)):
     """
     Register new tenant with all 6 steps:
     1. Choose accounting type (LOCKED FOREVER)
@@ -150,6 +152,18 @@ def register(registration: RegistrationComplete, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": str(admin_user.id), "tenant_id": str(tenant.id)})
     refresh_token = create_refresh_token(data={"sub": str(admin_user.id), "tenant_id": str(tenant.id)})
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=admin_user,
+        activity_type=ActivityType.REGISTER,
+        entity_type=ActivityEntity.USER,
+        entity_id=str(admin_user.id),
+        entity_name=admin_user.name,
+        description=f"New user registered: {admin_user.email}",
+        request=request,
+    )
+
     # Return response
     return TokenResponse(
         access_token=access_token,
@@ -160,7 +174,7 @@ def register(registration: RegistrationComplete, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(credentials: UserLogin, db: Session = Depends(get_db)):
+def login(credentials: UserLogin, request: Request, db: Session = Depends(get_db)):
     """
     Login with email and password
     Returns access token, refresh token, user info, and tenant info
@@ -224,9 +238,88 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(tenant.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id), "tenant_id": str(tenant.id)})
 
+    # Log activity
+    log_activity(
+        db=db,
+        user=user,
+        activity_type=ActivityType.LOGIN,
+        entity_type=ActivityEntity.USER,
+        entity_id=str(user.id),
+        entity_name=user.name,
+        description=f"User logged in: {user.email}",
+        request=request,
+    )
+
     # Return response
     return TokenResponse(
         access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse.from_orm(user),
+        tenant=TenantResponse.from_orm(tenant),
+    )
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh_access_token(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Refresh access token using refresh token
+    Expects refresh token in Authorization header
+    """
+    from ...core.security import decode_token
+    from uuid import UUID
+
+    # Get refresh token from header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header"
+        )
+
+    refresh_token = auth_header.replace("Bearer ", "")
+
+    # Decode and verify refresh token
+    payload = decode_token(refresh_token)
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+
+    user_id = payload.get("sub")
+    tenant_id = payload.get("tenant_id")
+
+    if not user_id or not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+
+    # Get user and tenant
+    user = db.query(User).filter(User.id == UUID(user_id)).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+
+    tenant = db.query(Tenant).filter(Tenant.id == UUID(tenant_id)).first()
+    if not tenant or not tenant.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tenant not found or inactive"
+        )
+
+    # Create new access token
+    access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(tenant.id)})
+
+    # Return new access token with same refresh token
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
         refresh_token=refresh_token,
         user=UserResponse.from_orm(user),
         tenant=TenantResponse.from_orm(tenant),
@@ -240,12 +333,28 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/logout")
-def logout():
+def logout(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Logout endpoint
     Note: With JWT, actual logout is handled on the client side by removing the token
     This endpoint is here for consistency and can be used for logging/analytics
     """
+    # Log activity
+    log_activity(
+        db=db,
+        user=current_user,
+        activity_type=ActivityType.LOGOUT,
+        entity_type=ActivityEntity.USER,
+        entity_id=str(current_user.id),
+        entity_name=current_user.name,
+        description=f"User logged out: {current_user.email}",
+        request=request,
+    )
+
     return {"message": "Successfully logged out"}
 
 
@@ -308,7 +417,7 @@ def update_tenant_settings(
     db: Session = Depends(get_db),
 ):
     """
-    Update tenant settings (company name and currency)
+    Update tenant settings (company name, currency, date format, PDF margins, default tax rate, and tax label)
     Only admin users can update tenant settings
     """
     # Get the tenant
@@ -334,7 +443,46 @@ def update_tenant_settings(
     if settings_data.currency:
         tenant.currency = settings_data.currency
 
+    # Update date format if provided
+    if settings_data.date_format:
+        tenant.date_format = settings_data.date_format
+
+    # Update PDF margins if provided
+    if settings_data.pdf_top_margin is not None:
+        tenant.pdf_top_margin = settings_data.pdf_top_margin
+
+    if settings_data.pdf_bottom_margin is not None:
+        tenant.pdf_bottom_margin = settings_data.pdf_bottom_margin
+
+    # Update default tax rate if provided
+    if settings_data.default_tax_rate is not None:
+        tenant.default_tax_rate = settings_data.default_tax_rate
+
+    # Update tax label if provided
+    if settings_data.tax_label is not None:
+        tenant.tax_label = settings_data.tax_label
+
     db.commit()
     db.refresh(tenant)
 
-    return TenantResponse.from_orm(tenant)
+    # Manually construct response to ensure all fields are included
+    response_data = {
+        "id": tenant.id,
+        "company_name": tenant.company_name,
+        "email": tenant.email,
+        "phone": tenant.phone,
+        "accounting_type": tenant.accounting_type,
+        "currency": tenant.currency,
+        "fiscal_year_start": tenant.fiscal_year_start,
+        "timezone": tenant.timezone,
+        "date_format": tenant.date_format,
+        "logo_url": tenant.logo_url,
+        "pdf_top_margin": tenant.pdf_top_margin,
+        "pdf_bottom_margin": tenant.pdf_bottom_margin,
+        "default_tax_rate": float(tenant.default_tax_rate) if tenant.default_tax_rate is not None else 0.0,
+        "tax_label": tenant.tax_label,
+        "is_active": tenant.is_active,
+        "created_at": tenant.created_at,
+    }
+
+    return TenantResponse(**response_data)

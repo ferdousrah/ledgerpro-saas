@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   Drawer,
@@ -15,6 +15,11 @@ import {
   Avatar,
   Menu,
   MenuItem,
+  Collapse,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -28,10 +33,29 @@ import {
   People as PeopleIcon,
   Logout as LogoutIcon,
   AccountCircle,
+  History as HistoryIcon,
+  Group as GroupIcon,
+  CalendarToday as CalendarIcon,
+  Description as InvoiceIcon,
+  Repeat as RecurringIcon,
+  Inventory as ProductsIcon,
+  Label as ProductCategoryIcon,
+  Warehouse as WarehouseIcon,
+  Build as AdjustmentIcon,
+  SwapHoriz as MovementIcon,
+  ExpandLess,
+  ExpandMore,
+  Receipt as TransactionIcon,
+  Storage as MasterDataIcon,
+  BusinessCenter as BusinessIcon,
+  AdminPanelSettings as AdminIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { AccountingType } from '../types';
+import YearSelector from '../components/YearSelector';
+import DialogHeader from '../components/DialogHeader';
 
 const DRAWER_WIDTH = 260;
 
@@ -39,14 +63,39 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+interface MenuGroup {
+  text: string;
+  icon: React.ReactNode;
+  children: MenuItem[];
+}
+
+interface MenuItem {
+  text: string;
+  icon: React.ReactNode;
+  path: string;
+  adminOnly?: boolean;
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, tenant, logout } = useAuthStore();
 
   const isSingleEntry = tenant?.accounting_type === AccountingType.SINGLE;
+
+  // Check if a path is active
+  const isPathActive = (path: string) => location.pathname === path;
+
+  const handleMenuToggle = (menuKey: string) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [menuKey]: !prev[menuKey],
+    }));
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -60,31 +109,248 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setAnchorEl(null);
   };
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
     handleMenuClose();
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutDialogOpen(false);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setLogoutDialogOpen(false);
     await logout();
     navigate('/login');
   };
 
-  // Menu items based on accounting type
-  const menuItems = isSingleEntry
-    ? [
-        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-        { text: 'Income', icon: <MoneyIcon color="success" />, path: '/income' },
-        { text: 'Expenses', icon: <MoneyIcon color="error" />, path: '/expenses' },
+  // Organized menu structure for Single Entry
+  const singleEntryMenuGroups: (MenuItem | MenuGroup)[] = useMemo(() => [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    {
+      text: 'Master Data',
+      icon: <MasterDataIcon />,
+      children: [
         { text: 'Accounts', icon: <AccountIcon />, path: '/accounts' },
         { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
         { text: 'Partners', icon: <PeopleIcon />, path: '/partners' },
-        { text: 'Reports', icon: <ReportIcon />, path: '/reports' },
+      ],
+    },
+    {
+      text: 'Transactions',
+      icon: <TransactionIcon />,
+      children: [
+        { text: 'Income', icon: <MoneyIcon color="success" />, path: '/income' },
+        { text: 'Expenses', icon: <MoneyIcon color="error" />, path: '/expenses' },
+      ],
+    },
+    {
+      text: 'Billing',
+      icon: <BusinessIcon />,
+      children: [
+        { text: 'Invoices', icon: <InvoiceIcon />, path: '/invoices' },
+        { text: 'Recurring Invoices', icon: <RecurringIcon />, path: '/recurring-invoices' },
+      ],
+    },
+    {
+      text: 'Reports',
+      icon: <ReportIcon />,
+      children: [
+        { text: 'Financial Reports', icon: <ReportIcon />, path: '/reports' },
+        { text: 'Activity Report', icon: <HistoryIcon />, path: '/activity-report' },
+      ],
+    },
+    {
+      text: 'Inventory',
+      icon: <ProductsIcon />,
+      children: [
+        { text: 'Products/Services', icon: <ProductsIcon />, path: '/products' },
+        { text: 'Product Categories', icon: <ProductCategoryIcon />, path: '/product-categories' },
+        { text: 'Warehouses', icon: <WarehouseIcon />, path: '/warehouses' },
+        { text: 'Stock Adjustments', icon: <AdjustmentIcon />, path: '/stock-adjustments' },
+        { text: 'Stock Movements', icon: <MovementIcon />, path: '/stock-movements' },
+      ],
+    },
+    {
+      text: 'Administration',
+      icon: <AdminIcon />,
+      children: [
+        { text: 'Financial Years', icon: <CalendarIcon />, path: '/financial-years', adminOnly: true },
+        { text: 'Users', icon: <GroupIcon />, path: '/users', adminOnly: true },
         { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-      ]
-    : [
-        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-        { text: 'Vouchers', icon: <ReceiptIcon />, path: '/vouchers' },
-        { text: 'Chart of Accounts', icon: <AccountIcon />, path: '/accounts' },
-        { text: 'Reports', icon: <ReportIcon />, path: '/reports' },
+      ],
+    },
+  ], []);
+
+  // Organized menu structure for Double Entry
+  const doubleEntryMenuGroups: (MenuItem | MenuGroup)[] = useMemo(() => [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Vouchers', icon: <ReceiptIcon />, path: '/vouchers' },
+    { text: 'Chart of Accounts', icon: <AccountIcon />, path: '/accounts' },
+    {
+      text: 'Reports',
+      icon: <ReportIcon />,
+      children: [
+        { text: 'Financial Reports', icon: <ReportIcon />, path: '/reports' },
+        { text: 'Activity Report', icon: <HistoryIcon />, path: '/activity-report' },
+      ],
+    },
+    {
+      text: 'Administration',
+      icon: <AdminIcon />,
+      children: [
+        { text: 'Financial Years', icon: <CalendarIcon />, path: '/financial-years', adminOnly: true },
+        { text: 'Users', icon: <GroupIcon />, path: '/users', adminOnly: true },
         { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-      ];
+      ],
+    },
+  ], []);
+
+  const menuGroups = isSingleEntry ? singleEntryMenuGroups : doubleEntryMenuGroups;
+
+  // Helper function to get initial open menus based on current route
+  const getInitialOpenMenus = () => {
+    const initialMenus: Record<string, boolean> = {};
+    menuGroups.forEach((group) => {
+      if ('children' in group) {
+        const menuKey = group.text.toLowerCase().replace(/\s+/g, '');
+        const hasActiveChild = group.children.some((child) => child.path === location.pathname);
+        if (hasActiveChild) {
+          initialMenus[menuKey] = true;
+        }
+      }
+    });
+    return initialMenus;
+  };
+
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(getInitialOpenMenus);
+  const prevAccountingType = useRef(isSingleEntry);
+
+  // Only reset menus when accounting type actually changes
+  useEffect(() => {
+    if (prevAccountingType.current !== isSingleEntry) {
+      prevAccountingType.current = isSingleEntry;
+      setOpenMenus(getInitialOpenMenus());
+    }
+  }, [isSingleEntry, menuGroups, location.pathname]);
+
+  const renderMenuItem = (item: MenuItem) => {
+    if (item.adminOnly && user?.role !== 'admin') return null;
+
+    const isActive = isPathActive(item.path);
+
+    return (
+      <ListItemButton
+        key={item.path}
+        onClick={() => navigate(item.path)}
+        sx={{
+          pl: 4,
+          bgcolor: isActive ? 'primary.main' : 'transparent',
+          color: isActive ? 'white' : 'inherit',
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            bgcolor: isActive ? 'primary.dark' : 'action.hover',
+            transform: isActive ? 'none' : 'translateX(4px)',
+          },
+        }}
+      >
+        <Box sx={{ minWidth: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: isActive ? 'white' : 'text.secondary',
+              transition: 'color 0.2s ease-in-out',
+            }}
+          >
+            —
+          </Typography>
+        </Box>
+        <ListItemText
+          primary={item.text}
+          slotProps={{
+            primary: {
+              variant: 'body2',
+            },
+          }}
+        />
+      </ListItemButton>
+    );
+  };
+
+  const renderMenuGroup = (group: MenuItem | MenuGroup) => {
+    // Check if it's a MenuItem (has path property)
+    if ('path' in group) {
+      if (group.adminOnly && user?.role !== 'admin') return null;
+
+      const isActive = isPathActive(group.path);
+
+      return (
+        <ListItem key={group.path} disablePadding>
+          <ListItemButton
+            onClick={() => navigate(group.path)}
+            sx={{
+              bgcolor: isActive ? 'primary.main' : 'transparent',
+              color: isActive ? 'white' : 'inherit',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                bgcolor: isActive ? 'primary.dark' : 'action.hover',
+                transform: isActive ? 'none' : 'translateX(4px)',
+              },
+              '& .MuiListItemIcon-root': {
+                color: isActive ? 'white' : 'inherit',
+                transition: 'all 0.2s ease-in-out',
+              },
+            }}
+          >
+            <ListItemIcon>{group.icon}</ListItemIcon>
+            <ListItemText primary={group.text} />
+          </ListItemButton>
+        </ListItem>
+      );
+    }
+
+    // It's a MenuGroup
+    const menuKey = group.text.toLowerCase().replace(/\s+/g, '');
+    const hasVisibleChildren = group.children.some(
+      (child) => !child.adminOnly || user?.role === 'admin'
+    );
+
+    if (!hasVisibleChildren) return null;
+
+    // Check if any child is active
+    const hasActiveChild = group.children.some((child) => isPathActive(child.path));
+
+    return (
+      <Box key={menuKey}>
+        <ListItemButton
+          onClick={() => handleMenuToggle(menuKey)}
+          sx={{
+            bgcolor: hasActiveChild && !openMenus[menuKey] ? 'action.selected' : 'transparent',
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              bgcolor: 'action.hover',
+              transform: 'translateX(2px)',
+            },
+            '& .MuiListItemIcon-root': {
+              transition: 'transform 0.2s ease-in-out',
+            },
+            '&:hover .MuiListItemIcon-root': {
+              transform: 'scale(1.1)',
+            },
+          }}
+        >
+          <ListItemIcon>{group.icon}</ListItemIcon>
+          <ListItemText primary={group.text} />
+          {openMenus[menuKey] ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+        <Collapse in={openMenus[menuKey]} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {group.children.map(renderMenuItem)}
+          </List>
+        </Collapse>
+      </Box>
+    );
+  };
 
   const drawer = (
     <Box>
@@ -103,19 +369,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Typography variant="subtitle2" fontWeight="bold">
           {tenant?.company_name}
         </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Currency: {tenant?.currency || 'USD'}
+        </Typography>
       </Box>
 
       <Divider />
 
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton onClick={() => navigate(item.path)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+      <List sx={{ py: 1 }}>
+        {menuGroups.map((group) => renderMenuGroup(group))}
       </List>
     </Box>
   );
@@ -141,9 +403,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {isSingleEntry ? 'Single Entry Accounting' : 'Double Entry Accounting'}
+          <Typography variant="h6" noWrap component="div">
+            {tenant?.company_name}
           </Typography>
+
+          {/* Year Selector */}
+          {isSingleEntry && (
+            <Box sx={{ ml: 3 }}>
+              <YearSelector />
+            </Box>
+          )}
+
+          <Box sx={{ flexGrow: 1 }} />
 
           {/* User Menu */}
           <IconButton
@@ -188,7 +459,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               Settings
             </MenuItem>
             <Divider />
-            <MenuItem onClick={handleLogout}>
+            <MenuItem onClick={handleLogoutClick}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
@@ -244,6 +515,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Toolbar /> {/* Spacer for AppBar */}
         {children}
       </Box>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={logoutDialogOpen} onClose={handleLogoutCancel} maxWidth="xs" fullWidth>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Logout</Typography>
+            </Box>
+          }
+          onClose={handleLogoutCancel}
+        />
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            Are you sure you want to logout?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleLogoutCancel} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleLogoutConfirm} variant="contained" color="error" autoFocus>
+            Logout
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

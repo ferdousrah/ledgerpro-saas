@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon, Cancel as CancelIcon, Visibility, VisibilityOff, Lock as LockIcon } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../services/api';
 
@@ -140,7 +141,7 @@ export default function ProfilePage() {
       {success && <Alert severity="success" sx={{ mb: 3 }}>{success}</Alert>}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card>
             <CardContent>
               <Box display="flex" flexDirection="column" alignItems="center" py={4}>
@@ -171,7 +172,7 @@ export default function ProfilePage() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Card>
             <CardContent>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -191,7 +192,7 @@ export default function ProfilePage() {
               </Box>
 
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Full Name"
                     fullWidth
@@ -201,7 +202,7 @@ export default function ProfilePage() {
                     variant={editing ? 'outlined' : 'filled'}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="Email"
                     fullWidth
@@ -278,7 +279,7 @@ export default function ProfilePage() {
 
       {/* Change Password Dialog */}
       <Dialog open={passwordDialogOpen} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Change Password</DialogTitle>
+        <DialogHeader title="Change Password" onClose={handleClosePasswordDialog} />
         <DialogContent>
           {passwordError && <Alert severity="error" sx={{ mb: 2 }}>{passwordError}</Alert>}
           {passwordSuccess && <Alert severity="success" sx={{ mb: 2 }}>{passwordSuccess}</Alert>}

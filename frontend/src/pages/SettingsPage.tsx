@@ -43,10 +43,12 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DialogHeader from '../components/DialogHeader';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../services/api';
 import { taxRatesApi } from '../services/singleEntryApi';
 import type { TaxRate, TaxRateCreate } from '../types';
+import { DATE_FORMATS, formatDate } from '../utils/dateFormatter';
 
 const CURRENCIES = [
   { code: 'USD', name: 'US Dollar', symbol: '$' },
@@ -66,7 +68,26 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
     company_name: tenant?.company_name || '',
+    phone: tenant?.phone || '',
+    address: tenant?.address || '',
     currency: tenant?.currency || 'USD',
+    date_format: tenant?.date_format || 'DD/MM/YYYY',
+    pdf_top_margin: tenant?.pdf_top_margin || 70,
+    pdf_bottom_margin: tenant?.pdf_bottom_margin || 20,
+    default_tax_rate: tenant?.default_tax_rate || 0,
+    tax_label: tenant?.tax_label || 'Tax',
+  });
+
+  // Logo upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(() => {
+    if (!tenant?.logo_url) return null;
+    // If URL is already absolute, use it; otherwise construct it
+    if (tenant.logo_url.startsWith('http')) {
+      return tenant.logo_url;
+    }
+    const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+    return `${apiBaseUrl}${tenant.logo_url}`;
   });
 
   // Fiscal Year Dialog
@@ -126,7 +147,14 @@ export default function SettingsPage() {
     setEditing(false);
     setFormData({
       company_name: tenant?.company_name || '',
+      phone: tenant?.phone || '',
+      address: tenant?.address || '',
       currency: tenant?.currency || 'USD',
+      date_format: tenant?.date_format || 'DD/MM/YYYY',
+      pdf_top_margin: tenant?.pdf_top_margin || 70,
+      pdf_bottom_margin: tenant?.pdf_bottom_margin || 20,
+      default_tax_rate: tenant?.default_tax_rate || 0,
+      tax_label: tenant?.tax_label || 'Tax',
     });
     setError('');
   };
@@ -137,11 +165,83 @@ export default function SettingsPage() {
       setSuccess('');
 
       const updatedTenant = await authAPI.updateTenantSettings(formData);
+
       setTenant(updatedTenant);
       setEditing(false);
-      showNotification('Settings updated successfully!', 'success');
+      showNotification('Settings updated successfully! Page will refresh...', 'success');
+
+      // Reload page after a short delay to ensure all components get updated tenant data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to update settings');
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (100KB max)
+    const maxSize = 100 * 1024; // 100KB
+    if (file.size > maxSize) {
+      setError('File too large. Maximum size is 100KB');
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+      setError('');
+
+      // Create FormData
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+
+      // Upload to backend
+      const response = await authAPI.uploadLogo(formDataUpload);
+
+      // Get base URL from environment or use relative path
+      const apiBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+      const logoUrl = `${apiBaseUrl}${response.url}`;
+      setLogoPreview(logoUrl);
+
+      // Update tenant in store
+      if (tenant) {
+        setTenant({ ...tenant, logo_url: logoUrl });
+      }
+
+      showNotification('Logo uploaded successfully!', 'success');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    try {
+      setUploadingLogo(true);
+      await authAPI.deleteLogo();
+      setLogoPreview(null);
+
+      // Update tenant in store
+      if (tenant) {
+        setTenant({ ...tenant, logo_url: undefined });
+      }
+
+      showNotification('Logo deleted successfully!', 'success');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete logo');
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -286,7 +386,101 @@ export default function SettingsPage() {
           <Card>
             <CardContent>
               <Box display="flex" flexDirection="column" alignItems="center" py={4}>
-                <BusinessIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                {/* Logo with Edit Icon */}
+                <Box sx={{ position: 'relative', mb: 2 }}>
+                  {logoPreview ? (
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        border: '2px solid',
+                        borderColor: 'primary.main',
+                        borderRadius: 2,
+                        p: 2,
+                        bgcolor: 'background.paper',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: 100,
+                        minWidth: 200,
+                      }}
+                    >
+                      <img
+                        src={logoPreview}
+                        alt={tenant?.company_name}
+                        style={{
+                          maxHeight: '80px',
+                          maxWidth: '180px',
+                          objectFit: 'contain',
+                        }}
+                        onError={(e) => {
+                          console.error('Failed to load logo:', logoPreview);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        component="label"
+                        disabled={uploadingLogo}
+                        sx={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          bgcolor: 'background.paper',
+                          boxShadow: 2,
+                          '&:hover': { bgcolor: 'grey.100' },
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleLogoUpload}
+                        />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        p: 2,
+                        bgcolor: 'background.paper',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: 100,
+                        minWidth: 200,
+                      }}
+                    >
+                      <BusinessIcon sx={{ fontSize: 60, color: 'primary.main' }} />
+                      <IconButton
+                        size="small"
+                        component="label"
+                        disabled={uploadingLogo}
+                        sx={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          bgcolor: 'background.paper',
+                          boxShadow: 2,
+                          '&:hover': { bgcolor: 'grey.100' },
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                          onChange={handleLogoUpload}
+                        />
+                      </IconButton>
+                    </Box>
+                  )}
+                </Box>
+
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   {tenant?.company_name}
                 </Typography>
@@ -332,6 +526,7 @@ export default function SettingsPage() {
               </Box>
 
               <Grid container spacing={3}>
+                {/* Row 1: Company Name */}
                 <Grid item xs={12}>
                   <TextField
                     label="Company Name"
@@ -343,7 +538,37 @@ export default function SettingsPage() {
                     helperText={editing ? 'Enter your company or business name' : ''}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+
+                {/* Row 2: Address */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Address"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    disabled={!editing}
+                    variant={editing ? 'outlined' : 'filled'}
+                    helperText={editing ? 'Enter company full address' : ''}
+                  />
+                </Grid>
+
+                {/* Row 3: Phone */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Phone Number"
+                    fullWidth
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    disabled={!editing}
+                    variant={editing ? 'outlined' : 'filled'}
+                    helperText={editing ? 'Enter company phone number' : ''}
+                  />
+                </Grid>
+
+                {/* Row 4: Currency, Date Format, Accounting Type */}
+                <Grid item xs={12} sm={4}>
                   <FormControl fullWidth disabled={!editing} variant={editing ? 'outlined' : 'filled'}>
                     <InputLabel>Currency</InputLabel>
                     <Select
@@ -359,7 +584,23 @@ export default function SettingsPage() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12} sm={4}>
+                  <FormControl fullWidth disabled={!editing} variant={editing ? 'outlined' : 'filled'}>
+                    <InputLabel>Date Format</InputLabel>
+                    <Select
+                      value={formData.date_format}
+                      onChange={(e) => setFormData({ ...formData, date_format: e.target.value })}
+                      label="Date Format"
+                    >
+                      {DATE_FORMATS.map((format) => (
+                        <MenuItem key={format.value} value={format.value}>
+                          {format.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={4}>
                   <TextField
                     label="Accounting Type"
                     fullWidth
@@ -367,6 +608,96 @@ export default function SettingsPage() {
                     disabled
                     variant="filled"
                     helperText="Cannot be changed after setup"
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h6" fontWeight="bold">
+                  Tax Configuration
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Configure tax settings for your invoices. Set default tax rate and terminology.
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Default Tax Rate (%)"
+                    fullWidth
+                    type="number"
+                    value={formData.default_tax_rate}
+                    onChange={(e) => setFormData({ ...formData, default_tax_rate: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) })}
+                    disabled={!editing}
+                    variant={editing ? 'outlined' : 'filled'}
+                    helperText={editing ? 'Tax rate applied to all invoices (0-100%)' : `${formData.default_tax_rate}% tax rate applied`}
+                    inputProps={{ min: 0, max: 100, step: 0.01 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth disabled={!editing} variant={editing ? 'outlined' : 'filled'}>
+                    <InputLabel>Tax Label</InputLabel>
+                    <Select
+                      value={formData.tax_label}
+                      onChange={(e) => setFormData({ ...formData, tax_label: e.target.value })}
+                      label="Tax Label"
+                    >
+                      <MenuItem value="Tax">Tax</MenuItem>
+                      <MenuItem value="VAT">VAT (Value Added Tax)</MenuItem>
+                      <MenuItem value="GST">GST (Goods and Services Tax)</MenuItem>
+                    </Select>
+                    {!editing && (
+                      <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                        Using "{formData.tax_label}" terminology in invoices
+                      </Box>
+                    )}
+                  </FormControl>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ mt: 3 }}>
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography variant="h6" fontWeight="bold">
+                  PDF Invoice Settings
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Configure margins for PDF invoices (in millimeters). Useful for pre-printed letterheads.
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="PDF Top Margin (mm)"
+                    fullWidth
+                    type="number"
+                    value={formData.pdf_top_margin}
+                    onChange={(e) => setFormData({ ...formData, pdf_top_margin: Math.max(0, Math.min(200, parseInt(e.target.value) || 0)) })}
+                    disabled={!editing}
+                    variant={editing ? 'outlined' : 'filled'}
+                    helperText={editing ? 'Space for company letterhead (0-200mm)' : `${formData.pdf_top_margin}mm space for letterhead`}
+                    inputProps={{ min: 0, max: 200 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="PDF Bottom Margin (mm)"
+                    fullWidth
+                    type="number"
+                    value={formData.pdf_bottom_margin}
+                    onChange={(e) => setFormData({ ...formData, pdf_bottom_margin: Math.max(0, Math.min(200, parseInt(e.target.value) || 0)) })}
+                    disabled={!editing}
+                    variant={editing ? 'outlined' : 'filled'}
+                    helperText={editing ? 'Space for footer (0-200mm)' : `${formData.pdf_bottom_margin}mm space for footer`}
+                    inputProps={{ min: 0, max: 200 }}
                   />
                 </Grid>
               </Grid>
@@ -456,7 +787,7 @@ export default function SettingsPage() {
 
       {/* Fiscal Year Settings Dialog */}
       <Dialog open={fiscalYearDialogOpen} onClose={() => setFiscalYearDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Fiscal Year Settings</DialogTitle>
+        <DialogHeader title="Fiscal Year Settings" onClose={() => setFiscalYearDialogOpen(false)} />
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <Typography variant="h6" gutterBottom>
@@ -471,7 +802,7 @@ export default function SettingsPage() {
                       Fiscal Year Start Date
                     </Typography>
                     <Typography variant="h6" fontWeight="bold">
-                      {tenant?.fiscal_year_start ? new Date(tenant.fiscal_year_start).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not set'}
+                      {tenant?.fiscal_year_start ? formatDate(tenant.fiscal_year_start, tenant?.date_format || 'DD/MM/YYYY') : 'Not set'}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -488,7 +819,7 @@ export default function SettingsPage() {
                         const endDate = new Date(startDate);
                         endDate.setFullYear(endDate.getFullYear() + 1);
                         endDate.setDate(endDate.getDate() - 1);
-                        return endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                        return formatDate(endDate, tenant?.date_format || 'DD/MM/YYYY');
                       })() : 'Not set'}
                     </Typography>
                   </CardContent>
@@ -518,7 +849,7 @@ export default function SettingsPage() {
                         currentFYEnd.setFullYear(currentFYEnd.getFullYear() + 1);
                         currentFYEnd.setDate(currentFYEnd.getDate() - 1);
 
-                        return `FY ${currentFYStart.getFullYear()}-${currentFYEnd.getFullYear()} (${currentFYStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${currentFYEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})`;
+                        return `FY ${currentFYStart.getFullYear()}-${currentFYEnd.getFullYear()} (${formatDate(currentFYStart, tenant?.date_format || 'DD/MM/YYYY')} - ${formatDate(currentFYEnd, tenant?.date_format || 'DD/MM/YYYY')})`;
                       })() : 'Not set'}
                     </Typography>
                   </CardContent>
@@ -546,21 +877,24 @@ export default function SettingsPage() {
 
       {/* Tax Configuration Dialog */}
       <Dialog open={taxDialogOpen} onClose={handleCloseTaxDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">Tax Configuration</Typography>
-            {!taxFormOpen && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={handleAddTaxRate}
-              >
-                Add Tax Rate
-              </Button>
-            )}
-          </Box>
-        </DialogTitle>
+        <DialogHeader
+          title={
+            <Box display="flex" justifyContent="space-between" alignItems="center" width="100%">
+              <Typography variant="h6">Tax Configuration</Typography>
+              {!taxFormOpen && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddTaxRate}
+                >
+                  Add Tax Rate
+                </Button>
+              )}
+            </Box>
+          }
+          onClose={handleCloseTaxDialog}
+        />
         <DialogContent>
           {taxError && <Alert severity="error" sx={{ mb: 2 }}>{taxError}</Alert>}
           {taxSuccess && <Alert severity="success" sx={{ mb: 2 }}>{taxSuccess}</Alert>}
@@ -785,7 +1119,7 @@ export default function SettingsPage() {
 
       {/* Backup & Export Dialog */}
       <Dialog open={backupDialogOpen} onClose={() => setBackupDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Backup & Export Data</DialogTitle>
+        <DialogHeader title="Backup & Export Data" onClose={() => setBackupDialogOpen(false)} />
         <DialogContent>
           <Typography variant="body2" color="text.secondary" paragraph sx={{ mt: 2 }}>
             Export your data in various formats for backup or migration purposes.
@@ -891,12 +1225,15 @@ export default function SettingsPage() {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <WarningIcon color="warning" />
-            <Typography variant="h6">Confirm Action</Typography>
-          </Box>
-        </DialogTitle>
+        <DialogHeader
+          title={
+            <Box display="flex" alignItems="center" gap={1}>
+              <WarningIcon color="warning" />
+              <Typography variant="h6">Confirm Action</Typography>
+            </Box>
+          }
+          onClose={handleCancelConfirm}
+        />
         <DialogContent>
           <Typography variant="body1" sx={{ mt: 1 }}>
             {confirmMessage}
