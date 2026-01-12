@@ -342,7 +342,7 @@ def create_transaction(
     log_activity(
         db=db,
         user=current_user,
-        activity_type="create",
+        activity_type="CREATE",
         entity_type="TRANSACTION",
         entity_id=str(new_transaction.id),
         entity_name=f"{new_transaction.transaction_type.value} - {account.name}",
@@ -486,7 +486,7 @@ async def update_transaction(
     log_activity(
         db=db,
         user=current_user,
-        activity_type="update",
+        activity_type="UPDATE",
         entity_type="TRANSACTION",
         entity_id=str(transaction.id),
         entity_name=f"{transaction.transaction_type.value} - {new_account.name}",
@@ -560,7 +560,7 @@ async def delete_transaction(
     log_activity(
         db=db,
         user=current_user,
-        activity_type="delete",
+        activity_type="DELETE",
         entity_type="TRANSACTION",
         entity_id=transaction_id_str,
         entity_name=f"{transaction_type} - {account_name}",

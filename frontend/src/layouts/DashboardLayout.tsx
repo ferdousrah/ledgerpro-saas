@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -50,14 +51,17 @@ import {
   BusinessCenter as BusinessIcon,
   AdminPanelSettings as AdminIcon,
   Warning as WarningIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { AccountingType } from '../types';
-import YearSelector from '../components/YearSelector';
 import DialogHeader from '../components/DialogHeader';
 
 const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH_COLLAPSED = 65;
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -80,6 +84,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
+
+  const drawerWidth = sidebarCollapsed ? DRAWER_WIDTH_COLLAPSED : DRAWER_WIDTH;
+
+  const handleSidebarToggle = () => {
+    const newValue = !sidebarCollapsed;
+    setSidebarCollapsed(newValue);
+    localStorage.setItem('sidebarCollapsed', String(newValue));
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -175,7 +191,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       text: 'Administration',
       icon: <AdminIcon />,
       children: [
-        { text: 'Financial Years', icon: <CalendarIcon />, path: '/financial-years', adminOnly: true },
         { text: 'Users', icon: <GroupIcon />, path: '/users', adminOnly: true },
         { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
       ],
@@ -239,12 +254,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     const isActive = isPathActive(item.path);
 
-    return (
+    const menuItemContent = (
       <ListItemButton
         key={item.path}
         onClick={() => navigate(item.path)}
         sx={{
-          pl: 4,
+          pl: sidebarCollapsed ? 2 : 4,
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
           bgcolor: isActive ? 'primary.main' : 'transparent',
           color: isActive ? 'white' : 'inherit',
           transition: 'all 0.2s ease-in-out',
@@ -254,26 +270,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           },
         }}
       >
-        <Box sx={{ minWidth: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography
-            variant="body2"
-            sx={{
-              color: isActive ? 'white' : 'text.secondary',
-              transition: 'color 0.2s ease-in-out',
-            }}
-          >
-            —
-          </Typography>
-        </Box>
-        <ListItemText
-          primary={item.text}
-          slotProps={{
-            primary: {
-              variant: 'body2',
-            },
-          }}
-        />
+        {sidebarCollapsed ? (
+          <ListItemIcon sx={{ minWidth: 0, color: isActive ? 'white' : 'inherit' }}>
+            {item.icon}
+          </ListItemIcon>
+        ) : (
+          <>
+            <Box sx={{ minWidth: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: isActive ? 'white' : 'text.secondary',
+                  transition: 'color 0.2s ease-in-out',
+                }}
+              >
+                —
+              </Typography>
+            </Box>
+            <ListItemText
+              primary={item.text}
+              slotProps={{
+                primary: {
+                  variant: 'body2',
+                },
+              }}
+            />
+          </>
+        )}
       </ListItemButton>
+    );
+
+    return sidebarCollapsed ? (
+      <Tooltip title={item.text} placement="right" key={item.path}>
+        {menuItemContent}
+      </Tooltip>
+    ) : (
+      menuItemContent
     );
   };
 
@@ -284,11 +316,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       const isActive = isPathActive(group.path);
 
-      return (
+      const singleItemContent = (
         <ListItem key={group.path} disablePadding>
           <ListItemButton
             onClick={() => navigate(group.path)}
             sx={{
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              px: sidebarCollapsed ? 2 : 2,
               bgcolor: isActive ? 'primary.main' : 'transparent',
               color: isActive ? 'white' : 'inherit',
               transition: 'all 0.2s ease-in-out',
@@ -298,14 +332,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               },
               '& .MuiListItemIcon-root': {
                 color: isActive ? 'white' : 'inherit',
+                minWidth: sidebarCollapsed ? 0 : 40,
                 transition: 'all 0.2s ease-in-out',
               },
             }}
           >
             <ListItemIcon>{group.icon}</ListItemIcon>
-            <ListItemText primary={group.text} />
+            {!sidebarCollapsed && <ListItemText primary={group.text} />}
           </ListItemButton>
         </ListItem>
+      );
+
+      return sidebarCollapsed ? (
+        <Tooltip title={group.text} placement="right" key={group.path}>
+          {singleItemContent}
+        </Tooltip>
+      ) : (
+        singleItemContent
       );
     }
 
@@ -319,6 +362,39 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     // Check if any child is active
     const hasActiveChild = group.children.some((child) => isPathActive(child.path));
+
+    // When collapsed, show only icon that navigates to first child
+    if (sidebarCollapsed) {
+      const firstVisibleChild = group.children.find(
+        (child) => !child.adminOnly || user?.role === 'admin'
+      );
+
+      return (
+        <Tooltip title={group.text} placement="right" key={menuKey}>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => firstVisibleChild && navigate(firstVisibleChild.path)}
+              sx={{
+                justifyContent: 'center',
+                px: 2,
+                bgcolor: hasActiveChild ? 'primary.main' : 'transparent',
+                color: hasActiveChild ? 'white' : 'inherit',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: hasActiveChild ? 'primary.dark' : 'action.hover',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: hasActiveChild ? 'white' : 'inherit',
+                  minWidth: 0,
+                },
+              }}
+            >
+              <ListItemIcon>{group.icon}</ListItemIcon>
+            </ListItemButton>
+          </ListItem>
+        </Tooltip>
+      );
+    }
 
     return (
       <Box key={menuKey}>
@@ -353,32 +429,47 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const drawer = (
-    <Box>
-      <Toolbar sx={{ bgcolor: 'primary.main', color: 'white' }}>
-        <Typography variant="h6" noWrap component="div">
-          {isSingleEntry ? '📗 LedgerPro' : '📘 LedgerPro'}
-        </Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <Toolbar sx={{ bgcolor: 'background.paper', color: 'text.primary', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
+        {sidebarCollapsed ? (
+          <Typography variant="h6" noWrap component="div">
+            {isSingleEntry ? '📗' : '📘'}
+          </Typography>
+        ) : (
+          <Typography variant="h6" noWrap component="div">
+            {isSingleEntry ? '📗 CloudFin' : '📘 CloudFin'}
+          </Typography>
+        )}
       </Toolbar>
       <Divider />
 
-      {/* Company Info */}
-      <Box sx={{ p: 2, bgcolor: 'grey.50' }}>
-        <Typography variant="caption" color="text.secondary">
-          {isSingleEntry ? 'Single Entry' : 'Double Entry'}
-        </Typography>
-        <Typography variant="subtitle2" fontWeight="bold">
-          {tenant?.company_name}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Currency: {tenant?.currency || 'USD'}
-        </Typography>
-      </Box>
-
-      <Divider />
-
-      <List sx={{ py: 1 }}>
+      <List sx={{ py: 1, flexGrow: 1 }}>
         {menuGroups.map((group) => renderMenuGroup(group))}
       </List>
+
+      {/* Collapse Toggle Button */}
+      <Divider />
+      <Box sx={{ p: 1 }}>
+        <Tooltip title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'} placement="right">
+          <ListItemButton
+            onClick={handleSidebarToggle}
+            sx={{
+              justifyContent: 'center',
+              borderRadius: 1,
+              '&:hover': { bgcolor: 'action.hover' },
+            }}
+          >
+            {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            {!sidebarCollapsed && (
+              <ListItemText
+                primary="Collapse"
+                sx={{ ml: 1 }}
+                slotProps={{ primary: { variant: 'body2' } }}
+              />
+            )}
+          </ListItemButton>
+        </Tooltip>
+      </Box>
     </Box>
   );
 
@@ -387,48 +478,72 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* App Bar */}
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
-          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
-          ml: { sm: `${DRAWER_WIDTH}px` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
+          transition: 'width 0.2s ease-in-out, margin 0.2s ease-in-out',
+          bgcolor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <Toolbar>
           <IconButton
-            color="inherit"
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 2, display: { sm: 'none' }, color: 'text.primary' }}
           >
             <MenuIcon />
           </IconButton>
 
-          <Typography variant="h6" noWrap component="div">
-            {tenant?.company_name}
-          </Typography>
-
-          {/* Year Selector */}
-          {isSingleEntry && (
-            <Box sx={{ ml: 3 }}>
-              <YearSelector />
-            </Box>
-          )}
-
           <Box sx={{ flexGrow: 1 }} />
 
-          {/* User Menu */}
-          <IconButton
-            onClick={handleMenuOpen}
-            size="small"
-            sx={{ ml: 2 }}
-            aria-controls={Boolean(anchorEl) ? 'account-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={Boolean(anchorEl) ? 'true' : undefined}
-          >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-              {user?.name?.charAt(0).toUpperCase()}
-            </Avatar>
-          </IconButton>
+          {/* Right Side: Notification + User Info + Avatar */}
+          <Box display="flex" alignItems="center" gap={2}>
+            {/* Notification Bell */}
+            <IconButton
+              sx={{
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'action.hover' }
+              }}
+            >
+              <NotificationsIcon />
+            </IconButton>
+
+            {/* Divider */}
+            <Divider orientation="vertical" flexItem sx={{ height: 40, alignSelf: 'center' }} />
+
+            {/* User Info */}
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1.5}
+              onClick={handleMenuOpen}
+              sx={{ cursor: 'pointer' }}
+            >
+              <Box textAlign="right">
+                <Typography variant="body2" fontWeight={600} color="text.primary">
+                  {user?.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {user?.role === 'admin' ? 'Administrator' : 'User'}
+                </Typography>
+              </Box>
+              <Avatar
+                sx={{
+                  width: 40,
+                  height: 40,
+                  bgcolor: 'primary.main',
+                  fontSize: 16,
+                  fontWeight: 600
+                }}
+              >
+                {user?.name?.charAt(0).toUpperCase()}
+              </Avatar>
+            </Box>
+          </Box>
 
           <Menu
             anchorEl={anchorEl}
@@ -472,7 +587,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar Drawer */}
       <Box
         component="nav"
-        sx={{ width: { sm: DRAWER_WIDTH }, flexShrink: { sm: 0 } }}
+        sx={{
+          width: { sm: drawerWidth },
+          flexShrink: { sm: 0 },
+          transition: 'width 0.2s ease-in-out',
+        }}
       >
         {/* Mobile drawer */}
         <Drawer
@@ -482,7 +601,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH, bgcolor: '#F9FAFB' },
           }}
         >
           {drawer}
@@ -493,7 +612,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: drawerWidth,
+              transition: 'width 0.2s ease-in-out',
+              overflowX: 'hidden',
+              bgcolor: '#F9FAFB',
+            },
           }}
           open
         >
@@ -507,9 +632,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
           bgcolor: 'background.default',
+          transition: 'width 0.2s ease-in-out',
         }}
       >
         <Toolbar /> {/* Spacer for AppBar */}

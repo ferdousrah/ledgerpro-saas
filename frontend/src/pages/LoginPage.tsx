@@ -28,7 +28,7 @@ export default function LoginPage() {
         <Card elevation={8}>
           <CardContent sx={{ p: 4 }}>
             <Box textAlign="center" mb={4}>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>🧾 LedgerPro SaaS</Typography>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>🧾 CloudFin SaaS</Typography>
               <Typography variant="body2" color="text.secondary">Sign in to your account</Typography>
             </Box>
             {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}

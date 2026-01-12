@@ -3,9 +3,9 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#3C3ACC',
+      light: '#6362d9',
+      dark: '#2a2a9e',
     },
     secondary: {
       main: '#4caf50',
@@ -66,12 +66,52 @@ export const theme = createTheme({
           textTransform: 'none',
           fontWeight: 500,
         },
+        containedSuccess: {
+          color: '#ffffff',
+        },
+        containedError: {
+          color: '#ffffff',
+        },
+        containedWarning: {
+          color: '#ffffff',
+        },
+        containedInfo: {
+          color: '#ffffff',
+        },
+        containedPrimary: {
+          color: '#ffffff',
+        },
+        containedSecondary: {
+          color: '#ffffff',
+        },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        filledSuccess: {
+          color: '#ffffff',
+        },
+        filledError: {
+          color: '#ffffff',
+        },
+        filledWarning: {
+          color: '#ffffff',
+        },
+        filledInfo: {
+          color: '#ffffff',
+        },
+        filledPrimary: {
+          color: '#ffffff',
+        },
+        filledSecondary: {
+          color: '#ffffff',
         },
       },
     },

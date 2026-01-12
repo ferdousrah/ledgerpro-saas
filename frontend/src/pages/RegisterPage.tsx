@@ -68,7 +68,7 @@ export default function RegisterPage() {
       <Container maxWidth="md">
         <Card elevation={8}>
           <CardContent sx={{ p: 4 }}>
-            <Typography variant="h4" fontWeight="bold" align="center" gutterBottom>🧾 LedgerPro SaaS</Typography>
+            <Typography variant="h4" fontWeight="bold" align="center" gutterBottom>🧾 CloudFin SaaS</Typography>
             <Typography variant="body2" color="text.secondary" align="center" mb={4}>Create your account</Typography>
 
             <Stepper activeStep={activeStep} sx={{ mb: 4 }}>

@@ -71,7 +71,13 @@
       "Bash(/c/Users/Nanosoft-1/AppData/Local/Programs/Python/Launcher/py.exe -3.13 run_invoice_status_fix.py)",
       "Bash(/c/Users/Nanosoft-1/AppData/Local/Programs/Python/Launcher/py.exe:*)",
       "Bash(cmd /c \"taskkill /F /PID 23704 /PID 1496 2>nul\")",
-      "Bash(cmd /c \"taskkill /F /PID 12504 /PID 10508 /PID 2936 /PID 7596\")"
+      "Bash(cmd /c \"taskkill /F /PID 12504 /PID 10508 /PID 2936 /PID 7596\")",
+      "Bash(set PGPASSWORD=Ledger@123)",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\psql.exe\" -h localhost -U postgres -d ledgerpro -c \"ALTER TABLE tenants ADD COLUMN IF NOT EXISTS address TEXT;\")",
+      "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\bin\\\\pg_ctl.exe\" -D \"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\data\" start)",
+      "Bash(cmd /c dir \"C:\\\\Program Files\\\\PostgreSQL\\\\17\\\\data\")",
+      "Bash(cmd /c \"sc query | findstr /i postgresql\")",
+      "Bash(.venv/Scripts/activate)"
     ],
     "deny": [],
     "ask": []

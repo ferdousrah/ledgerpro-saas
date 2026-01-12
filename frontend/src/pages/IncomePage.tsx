@@ -191,7 +191,7 @@ export default function IncomePage() {
         </Box>
         <Button
           variant="contained"
-          color="success"
+          color="primary"
           startIcon={<Add />}
           onClick={() => handleOpenDialog()}
           disabled={accounts.length === 0}
